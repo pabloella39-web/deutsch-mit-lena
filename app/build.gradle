@@ -1,0 +1,48 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.lenadeutsch.app'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.lenadeutsch.app"
+        minSdk 26
+        targetSdk 34
+        // GitHub numbers each build, so every new APK installs as an update.
+        def run = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInteger()
+        versionCode run
+        versionName "1." + run
+    }
+
+    // Fixed signing key, so every new build installs as an update and keeps your progress.
+    signingConfigs {
+        lena {
+            storeFile file('lena-release.keystore')
+            storePassword 'deutschmitlena'
+            keyAlias 'lena'
+            keyPassword 'deutschmitlena'
+        }
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.lena
+        }
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.lena
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
+    }
+}

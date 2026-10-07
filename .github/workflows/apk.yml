@@ -1,0 +1,55 @@
+name: Construir APK
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Descomprimir el proyecto si se subió como zip
+        run: |
+          for z in *.zip; do
+            if [ -f "$z" ]; then unzip -o -q "$z" -d .; fi
+          done
+
+      - name: Localizar el proyecto
+        run: |
+          G=$(find . -name gradlew -not -path "./.git/*" | head -n 1)
+          if [ -z "$G" ]; then echo "No encuentro el proyecto (falta gradlew)"; exit 1; fi
+          echo "PROJ=$(dirname "$G")" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Compilar el APK
+        working-directory: ${{ env.PROJ }}
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon --stacktrace
+          cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/DeutschMitLena.apk"
+
+      - name: Guardar el APK en esta ejecución
+        uses: actions/upload-artifact@v4
+        with:
+          name: DeutschMitLena-apk
+          path: DeutschMitLena.apk
+
+      - name: Publicar el APK para descargarlo desde el móvil
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: Deutsch mit Lena (versión ${{ github.run_number }})
+          body: Descarga DeutschMitLena.apk desde el móvil e instálalo. Necesitas una clave gratuita de Gemini (aistudio.google.com/apikey).
+          files: DeutschMitLena.apk
+          make_latest: true

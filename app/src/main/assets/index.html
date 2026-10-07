@@ -1,0 +1,1048 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Deutsch mit Lena</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Kalam:wght@400;700&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;0,7..72,700;1,7..72,400&display=swap">
+<style>
+/* Layout: one-screen school notebook. Header, ruled chat page, composer pinned at the bottom; sheets slide up for progress, words and settings.
+   Type roles: serif (Literata) = German, sans (Atkinson) = Spanish/UI, hand (Kalam) = the teacher's red pen. */
+:root{
+  --paper:#F4F5FA; --sheet:#FFFFFF; --ink:#1A2040; --muted:#596181; --line:#DCE1EF; --rule:#E2E7F4; --margin:#F1CDC9;
+  --blue:#2B3FB4; --blue-ink:#2B3FB4; --blue-soft:#E7EAFB; --on-blue:#FFFFFF;
+  --red:#BF2D27; --red-soft:#FCEEEC; --red-line:#F0C3BF;
+  --ok:#2A7548; --ok-soft:#E3F2E8; --amber:#8F5C00; --amber-soft:#FBF0D9;
+  --shadow:0 1px 2px rgba(26,32,64,.06), 0 4px 14px rgba(26,32,64,.06);
+  --scrim:rgba(18,20,34,.4);
+  --f-de:"Literata", Georgia, "Noto Serif", "Times New Roman", serif;
+  --f-ui:"Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --f-hand:"Kalam", "Segoe Print", "Bradley Hand", cursive;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper:#11131C; --sheet:#1A1E2B; --ink:#E6E8F2; --muted:#9CA2BB; --line:#2B3146; --rule:#1C2131; --margin:#3E2629;
+    --blue:#3A4BC2; --blue-ink:#A3B0FF; --blue-soft:#222A4E; --on-blue:#FFFFFF;
+    --red:#FF948B; --red-soft:#33201F; --red-line:#5C3432;
+    --ok:#7AD3A0; --ok-soft:#1B3125; --amber:#E8B95C; --amber-soft:#372B13;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+    --scrim:rgba(0,0,0,.55);
+    color-scheme:dark;
+  }
+}
+html{height:100%;box-sizing:border-box}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+img{max-width:100%}
+body{height:100%;margin:0;background:var(--paper);color:var(--ink);font-family:var(--f-ui);font-size:15px;line-height:1.45;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
+button,input{font:inherit;color:inherit}
+a{color:var(--blue-ink)}
+:focus-visible{outline:2px solid var(--blue-ink);outline-offset:2px}
+
+.app{height:100%;display:flex;flex-direction:column;max-width:760px;margin:0 auto;background:var(--paper)}
+
+/* Header */
+.bar{flex:none;display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--sheet);border-bottom:1px solid var(--line)}
+.brand{flex:1;min-width:0}
+.brand h1{margin:0;font-family:var(--f-de);font-weight:700;font-size:1.2rem;letter-spacing:-.01em;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand h1 em{font-weight:400;color:var(--blue-ink)}
+.brand p{margin:1px 0 0;font-size:.76rem;color:var(--muted)}
+@media (max-width:400px){.brand p{display:none}}
+.level{flex:none;display:flex;flex-direction:column;gap:4px;align-items:stretch;padding:6px 10px;border:1px solid var(--line);border-radius:10px;background:var(--paper);cursor:pointer;min-width:78px;text-align:left}
+.level-top{display:flex;gap:5px;align-items:baseline;font-size:.8rem;color:var(--muted);white-space:nowrap}
+.level-top b{font-size:.95rem;color:var(--ink);font-variant-numeric:tabular-nums}
+.meter{display:block;height:4px;border-radius:2px;background:var(--blue-soft);overflow:hidden}
+.meter span{display:block;height:100%;width:0;background:var(--blue);transition:width .5s ease}
+.icon-btn{flex:none;width:40px;height:40px;display:grid;place-items:center;border-radius:10px;border:1px solid var(--line);background:var(--sheet);cursor:pointer;position:relative;color:var(--ink);font-size:1.3rem;line-height:1}
+.badge{position:absolute;top:-6px;right:-6px;min-width:19px;height:19px;padding:0 5px;border-radius:10px;background:var(--blue);color:var(--on-blue);font-size:.7rem;font-weight:700;display:grid;place-items:center;font-variant-numeric:tabular-nums}
+
+.topicbar{flex:none;display:flex;align-items:center;gap:8px;padding:7px 16px;background:var(--sheet);border-bottom:1px solid var(--line);font-size:.85rem;min-width:0}
+.tb-label{font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+.topicbar b{font-family:var(--f-de);font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.topicbar .link{margin-left:auto;flex:none}
+.notice{flex:none;padding:8px 16px;font-size:.85rem;background:var(--amber-soft);border-bottom:1px solid var(--line)}
+
+/* Chat page: ruled notebook paper with a red margin line */
+.chat{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-inline:16px;padding-block:16px 14px;
+  background-color:var(--paper);
+  background-image:linear-gradient(to right, transparent 8px, var(--margin) 8px, var(--margin) 9px, transparent 9px),
+                   repeating-linear-gradient(to bottom, transparent 0, transparent 27px, var(--rule) 27px, var(--rule) 28px);
+  background-attachment:local}
+.msgs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px}
+.m{display:flex;flex-direction:column;gap:6px;max-width:88%;min-width:0}
+.m.lena,.m.hint{align-self:flex-start}
+.m.me{align-self:flex-end;align-items:flex-end}
+.who{font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+.bubble{padding:10px 14px;border-radius:16px;font-family:var(--f-de);font-size:1.06rem;line-height:1.5;overflow-wrap:anywhere}
+.lena .bubble{background:var(--sheet);border:1px solid var(--line);border-top-left-radius:4px;box-shadow:var(--shadow)}
+.me .bubble{background:var(--blue);color:var(--on-blue);border-top-right-radius:4px}
+.es{font-size:.9rem;color:var(--muted);border-left:2px solid var(--line);padding-left:10px;margin-left:4px}
+.actions{display:flex;gap:6px;flex-wrap:wrap}
+.act{display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:var(--sheet);font-size:.8rem;color:var(--muted);cursor:pointer;line-height:1.2}
+.act svg{flex:none}
+.act[aria-pressed="true"],.act.speaking{color:var(--blue-ink);border-color:var(--blue-ink);background:var(--blue-soft)}
+
+/* Teacher's red pen */
+.fix{display:flex;flex-direction:column;gap:3px;max-width:100%;background:var(--red-soft);border:1px solid var(--red-line);border-radius:12px;padding:8px 12px 9px}
+.fix-h{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.fix .lab{font-family:var(--f-hand);color:var(--red);font-size:1.02rem;line-height:1.1}
+.fix .de{font-family:var(--f-de);font-size:1rem;overflow-wrap:anywhere}
+.fix mark{background:none;color:var(--red);font-weight:700;text-decoration:underline;text-decoration-style:wavy;text-decoration-color:var(--red);text-decoration-thickness:1px;text-underline-offset:4px}
+.fix .note{font-size:.84rem;color:var(--muted)}
+.mini{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:50%;border:1px solid var(--red-line);background:var(--sheet);color:var(--red);cursor:pointer;flex:none}
+.mini.speaking{background:var(--red);color:var(--sheet)}
+
+/* Index card for a new word */
+.card{background:var(--sheet);border:1px solid var(--line);border-radius:6px;padding:0 12px 10px;box-shadow:var(--shadow);max-width:100%}
+.card-h{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-block:6px 5px;border-bottom:2px solid var(--red-line);margin-bottom:7px}
+.card-h span{font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--blue-ink)}
+.card-h .mini{width:30px;height:30px;border-color:var(--line);color:var(--blue-ink)}
+.card-h .mini.speaking{background:var(--blue);color:var(--on-blue)}
+.card-w{font-family:var(--f-de);font-weight:700;font-size:1.15rem;line-height:1.3}
+.card-es{font-size:.9rem;color:var(--muted)}
+.card-ex{font-family:var(--f-de);font-style:italic;font-size:.92rem;margin-top:4px}
+
+/* Hint */
+.hintcard{border:1px dashed var(--blue-ink);background:var(--blue-soft);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.hintcard .lab{display:flex;align-items:center;gap:6px;font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--blue-ink)}
+.hintcard p{margin:0;font-size:.92rem}
+.starter{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.starter q{font-family:var(--f-de);font-size:1rem;quotes:"„" "“"}
+.hwords{display:flex;gap:6px;flex-wrap:wrap}
+.hword{font-size:.8rem;background:var(--sheet);border:1px solid var(--line);border-radius:999px;padding:3px 9px}
+.hword b{font-family:var(--f-de);font-weight:600}
+
+.typing{display:inline-flex;gap:5px;padding:14px 16px}
+.typing i{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:blink 1.2s infinite both}
+.typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,80%,100%{opacity:.2}40%{opacity:1}}
+.err{align-self:stretch;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--amber-soft);border-radius:12px;padding:10px 12px;font-size:.88rem}
+.err p{margin:0;flex:1;min-width:12rem}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 13px;border-radius:10px;border:1px solid var(--line);background:var(--sheet);cursor:pointer;font-size:.88rem;font-weight:700}
+.btn.primary{background:var(--blue);color:var(--on-blue);border-color:transparent}
+.btn:disabled{opacity:.5;cursor:default}
+.link{background:none;border:0;color:var(--blue-ink);font-weight:700;cursor:pointer;padding:4px 0;font-size:.85rem}
+
+/* Setup card (API key) */
+.setup{background:var(--sheet);border:1px solid var(--blue-ink);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:var(--shadow)}
+.setup h3{margin:0;font-family:var(--f-de);font-size:1.15rem}
+.setup ol{margin:0;padding-left:1.2rem;display:flex;flex-direction:column;gap:4px;font-size:.9rem}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:.8rem;font-weight:700;color:var(--muted)}
+.field input{width:100%;min-width:0;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:16px;background:var(--paper);color:var(--ink);font-family:ui-monospace,"Roboto Mono",Menlo,monospace}
+.field input:focus{border-color:var(--blue-ink);outline:none}
+.inline{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.status{font-size:.84rem;margin:0}
+.status.ok{color:var(--ok)}.status.bad{color:var(--red)}
+
+/* Welcome */
+.welcome{display:flex;flex-direction:column;gap:20px;padding-bottom:10px}
+.hello h2{margin:0;font-family:var(--f-de);font-size:1.75rem;font-weight:700;letter-spacing:-.015em;line-height:1.15;text-wrap:balance}
+.hello p{margin:8px 0 0;color:var(--muted);max-width:56ch}
+.section-label{font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--muted);margin-bottom:8px}
+.topics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+@media (min-width:600px){.topics{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.topic{text-align:left;padding:11px 12px;border-radius:12px;border:1px solid var(--line);background:var(--sheet);cursor:pointer;display:flex;flex-direction:column;gap:2px;min-height:64px;min-width:0}
+.topic b{font-family:var(--f-de);font-size:1rem;font-weight:600;line-height:1.25}
+.topic span{font-size:.8rem;color:var(--muted)}
+.topic:disabled{opacity:.5;cursor:default}
+.example{border:1px dashed var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px;background:var(--paper)}
+.example .section-label{margin-bottom:0}
+
+/* Composer */
+.composer{flex:none;display:flex;flex-direction:column;gap:8px;background:var(--sheet);border-top:1px solid var(--line);padding:8px 16px 10px}
+.phrases{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-inline:-16px;padding-inline:16px}
+.phrases::-webkit-scrollbar{display:none}
+.phrase{flex:none;display:inline-flex;align-items:center;gap:5px;padding:7px 11px;border-radius:999px;background:var(--blue-soft);color:var(--blue-ink);border:0;font-family:var(--f-de);font-size:.86rem;cursor:pointer;white-space:nowrap}
+.phrase.hintbtn{font-family:var(--f-ui);font-weight:700;background:var(--sheet);border:1px solid var(--blue-ink)}
+.phrase:disabled{opacity:.5;cursor:default}
+.mic-tip{display:flex;gap:10px;align-items:flex-start;background:var(--blue-soft);border-radius:12px;padding:10px 12px;font-size:.85rem}
+.mic-tip p{margin:0;flex:1;min-width:0}
+.row{display:flex;align-items:flex-end;gap:8px;margin:0}
+.row textarea{flex:1;min-width:0;resize:none;border:1px solid var(--line);border-radius:22px;padding:10px 15px;font-family:var(--f-de);font-size:16px;line-height:1.4;max-height:128px;background:var(--paper);color:var(--ink);outline:none}
+.row textarea:focus{border-color:var(--blue-ink)}
+.row textarea::placeholder{color:var(--muted);font-style:italic}
+.round{flex:none;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--line);background:var(--sheet);cursor:pointer;color:var(--ink)}
+.round.send{background:var(--blue);color:var(--on-blue);border-color:transparent}
+.round.mic.native{border-color:var(--blue-ink);color:var(--blue-ink)}
+.round.mic.listening{background:var(--red);border-color:var(--red);color:var(--sheet)}
+.round:disabled{opacity:.4;cursor:default}
+.convo{display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--blue-ink);font-weight:700}
+.convo i{width:8px;height:8px;border-radius:50%;background:var(--red)}
+
+/* Sheets */
+.scrim{position:fixed;inset:0;background:var(--scrim);z-index:20}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;max-height:88%;overflow-y:auto;overscroll-behavior:contain;background:var(--sheet);border-radius:18px 18px 0 0;padding-inline:16px;padding-block:0 22px;max-width:760px;margin:0 auto;box-shadow:0 -10px 30px rgba(0,0,0,.18);display:flex;flex-direction:column;gap:16px}
+.sheet-h{position:sticky;top:0;z-index:1;background:var(--sheet);display:flex;align-items:center;justify-content:space-between;gap:10px;padding-block:14px 8px;border-bottom:1px solid var(--line)}
+.sheet-h h2{margin:0;font-family:var(--f-de);font-size:1.3rem;font-weight:700}
+.sheet p.lead{margin:0;color:var(--muted);font-size:.9rem;max-width:60ch}
+.ladder{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.rung{display:flex;flex-direction:column;gap:5px;min-width:0}
+.rung .bar2{height:10px;border-radius:3px;background:var(--blue-soft);overflow:hidden}
+.rung .bar2 i{display:block;height:100%;background:var(--blue)}
+.rung small{font-size:.68rem;color:var(--muted);text-align:center;font-variant-numeric:tabular-nums;white-space:nowrap}
+.rung.cur small{color:var(--blue-ink);font-weight:700}
+.now{font-family:var(--f-de);font-size:1.05rem;margin:0}
+.now b{color:var(--blue-ink)}
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.stat{border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-width:0}
+.stat b{display:block;font-family:var(--f-de);font-size:1.55rem;line-height:1.2;font-variant-numeric:tabular-nums}
+.stat span{font-size:.8rem;color:var(--muted)}
+.kasten{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:2px solid var(--ink);border-top-width:0;border-radius:0 0 10px 10px;overflow:hidden}
+.fach{padding:12px 6px 10px;text-align:center;border-top:4px solid var(--line);min-width:0}
+.fach+.fach{border-left:1px solid var(--line)}
+.fach b{display:block;font-family:var(--f-de);font-size:1.4rem;font-variant-numeric:tabular-nums}
+.fach span{font-size:.78rem;color:var(--muted)}
+.fach.f0{border-top-color:var(--blue)}.fach.f1{border-top-color:var(--amber)}.fach.f2{border-top-color:var(--ok)}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{padding:7px 11px;border-radius:999px;border:1px solid var(--line);background:var(--sheet);font-size:.82rem;cursor:pointer;font-variant-numeric:tabular-nums}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.wlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.w{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--sheet)}
+.w-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.w-de{font-family:var(--f-de);font-weight:600;font-size:1.05rem;overflow-wrap:anywhere}
+.w-es{font-size:.88rem;color:var(--muted)}
+.w-ex{font-family:var(--f-de);font-style:italic;font-size:.88rem;overflow-wrap:anywhere}
+.w-side{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.w-side .mini{border-color:var(--line);color:var(--blue-ink)}
+.w-side .mini.speaking{background:var(--blue);color:var(--on-blue)}
+.pill{font-size:.68rem;font-weight:700;letter-spacing:.04em;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.pill.s0{background:var(--blue-soft);color:var(--blue-ink)}
+.pill.s1{background:var(--amber-soft);color:var(--amber)}
+.pill.s2{background:var(--ok-soft);color:var(--ok)}
+.pips{display:flex;gap:3px}
+.pips i{width:7px;height:7px;border-radius:50%;background:var(--line)}
+.pips i.on{background:var(--ok)}
+.empty{border:1px dashed var(--line);border-radius:12px;padding:16px;color:var(--muted);font-size:.9rem;text-align:center}
+.group{display:flex;flex-direction:column;gap:8px}
+.group h3{margin:0;font-size:.95rem}
+.opt{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-radius:10px;cursor:pointer}
+.opt input{margin-top:3px;accent-color:var(--blue);flex:none;width:18px;height:18px}
+.opt:has(input:checked){border-color:var(--blue-ink);background:var(--blue-soft)}
+.opt span{display:flex;flex-direction:column;gap:1px;min-width:0}
+.opt small{color:var(--muted);font-size:.8rem}
+.opt:has(input:disabled){opacity:.55;cursor:default}
+.danger{color:var(--red);border-color:var(--red-line)}
+.confirm{display:flex;flex-direction:column;gap:8px;background:var(--red-soft);border-radius:12px;padding:12px}
+.confirm p{margin:0;font-size:.9rem}
+.confirm .btns{display:flex;gap:8px;flex-wrap:wrap}
+.confirm .btn.primary{background:var(--red);color:var(--sheet)}
+.note{font-size:.82rem;color:var(--muted);margin:0}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);top:66px;z-index:30;width:max-content;max-width:min(calc(100vw - 32px),440px);background:var(--ink);color:var(--paper);padding:10px 14px;border-radius:12px;font-size:.9rem;box-shadow:var(--shadow);text-align:center}
+@media (prefers-reduced-motion: reduce){.typing i{animation:none;opacity:.6}.meter span{transition:none}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="bar">
+    <div class="brand">
+      <h1>Deutsch <em>mit Lena</em></h1>
+      <p>Tu tutora de alemán</p>
+    </div>
+    <button class="level" id="levelBtn" type="button" aria-label="Ver tu nivel y tu progreso">
+      <span class="level-top"><b id="lvCode">A2</b><span id="lvName">medio</span></span>
+      <span class="meter"><span id="lvBar"></span></span>
+    </button>
+    <button class="icon-btn" id="vocabBtn" type="button" aria-label="Mis palabras">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10h18v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-9z"/><path d="M6 10V5.5A1.5 1.5 0 0 1 7.5 4h9A1.5 1.5 0 0 1 18 5.5V10"/><path d="M9 7.5h6M10 14h4"/></svg>
+      <span class="badge" id="vocabCount" hidden>0</span>
+    </button>
+    <button class="icon-btn" id="setBtn" type="button" aria-label="Ajustes">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h9M18 7h2M4 17h3M12 17h8"/><circle cx="15.5" cy="7" r="2.3"/><circle cx="9.5" cy="17" r="2.3"/></svg>
+    </button>
+  </header>
+
+  <div class="topicbar" id="topicbar" hidden>
+    <span class="tb-label">Tema</span>
+    <b id="topicName" lang="de"></b>
+    <button type="button" class="link" id="changeTopic">Cambiar tema</button>
+  </div>
+
+  <div class="notice" id="notice" role="status" hidden></div>
+
+  <main class="chat" id="chat">
+    <section class="welcome" id="welcome">
+      <div class="hello">
+        <h2 lang="de">Hallo! Ich bin Lena.</h2>
+        <p>Charla conmigo en alemán, escribiendo o hablando. Hablo a tu nivel, corrijo tus frases y te enseño palabras nuevas muy poco a poco.</p>
+      </div>
+
+      <div class="setup" id="setup" hidden>
+        <h3>Conecta a Lena con Gemini (gratis)</h3>
+        <ol>
+          <li>Entra en <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> con tu cuenta de Google.</li>
+          <li>Pulsa «Create API key» (Crear clave de API). No hace falta tarjeta.</li>
+          <li>Copia la clave y pégala aquí.</li>
+        </ol>
+        <div class="field"><label for="setupKey">Clave de API de Gemini</label><input id="setupKey" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="AIza…"></div>
+        <div class="inline"><button type="button" class="btn primary" id="setupSave">Guardar y probar</button><p class="status" id="setupStatus"></p></div>
+      </div>
+
+      <div>
+        <div class="section-label">Elige un tema para empezar</div>
+        <div class="topics" id="topics"></div>
+      </div>
+      <div class="example">
+        <div class="section-label">Así funciona · ejemplo</div>
+        <div class="m lena"><div class="who">Lena</div><div class="bubble" lang="de">Was hast du am Wochenende gemacht?</div></div>
+        <div class="m me">
+          <div class="bubble" lang="de">Ich habe in Park gegangen.</div>
+          <div class="fix"><span class="lab">Mejor así</span><span class="de" lang="de">Ich <mark>bin</mark> in <mark>den</mark> Park gegangen.</span><span class="note">«Gehen» forma el Perfekt con «sein», y «in» con movimiento va con acusativo.</span></div>
+        </div>
+        <div class="m lena">
+          <div class="who">Lena</div>
+          <div class="bubble" lang="de">Schön! War das ein Ausflug mit Freunden?</div>
+          <div class="card"><div class="card-h"><span>Palabra nueva</span></div><div class="card-w" lang="de">der Ausflug</div><div class="card-es">la excursión</div><div class="card-ex" lang="de">Am Sonntag machen wir einen Ausflug.</div></div>
+        </div>
+      </div>
+    </section>
+    <ol class="msgs" id="msgs" aria-live="polite"></ol>
+  </main>
+
+  <footer class="composer">
+    <div class="convo" id="convoBadge" hidden><i></i>Modo conversación activado</div>
+    <div class="phrases" id="phrases" hidden>
+      <button class="phrase hintbtn" id="hintBtn" type="button"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg>Dame una pista</button>
+      <button class="phrase" type="button" data-p="Wie bitte?" lang="de">Wie bitte?</button>
+      <button class="phrase" type="button" data-p="Langsamer, bitte." lang="de">Langsamer, bitte.</button>
+      <button class="phrase" type="button" data-p="Ich verstehe das nicht." lang="de">Ich verstehe das nicht.</button>
+      <button class="phrase" type="button" data-p="Wie sagt man … auf Deutsch?" lang="de">Wie sagt man … auf Deutsch?</button>
+      <button class="phrase" type="button" data-p="Was bedeutet …?" lang="de">Was bedeutet …?</button>
+    </div>
+    <div class="mic-tip" id="micTip" hidden>
+      <p id="micTipText"></p>
+      <button type="button" class="link" id="micTipClose">Entendido</button>
+    </div>
+    <form class="row" id="form" autocomplete="off">
+      <button type="button" class="round mic" id="micBtn" aria-label="Hablar en alemán">
+        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>
+      </button>
+      <textarea id="input" rows="1" lang="de" placeholder="Schreib auf Deutsch…" autocorrect="off" autocapitalize="sentences" spellcheck="false" aria-label="Tu mensaje en alemán"></textarea>
+      <button type="submit" class="round send" id="sendBtn" aria-label="Enviar" disabled>
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+    </form>
+  </footer>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+
+<section class="sheet" id="sh-progress" role="dialog" aria-modal="true" aria-labelledby="h-progress" hidden>
+  <div class="sheet-h"><h2 id="h-progress">Tu progreso</h2><button type="button" class="icon-btn close" aria-label="Cerrar">×</button></div>
+  <p class="now" id="nowText"></p>
+  <div class="ladder" id="ladder"></div>
+  <p class="lead">Lena ajusta su alemán a este nivel. Subes cuando escribes frases correctas, te atreves con frases más largas y dominas palabras nuevas.</p>
+  <div class="stats" id="stats"></div>
+  <div class="group">
+    <h3>Tu caja de palabras</h3>
+    <div class="kasten" id="kasten"></div>
+    <p class="note">Una palabra pasa a «dominada» cuando la usas bien tres veces en la conversación.</p>
+  </div>
+</section>
+
+<section class="sheet" id="sh-vocab" role="dialog" aria-modal="true" aria-labelledby="h-vocab" hidden>
+  <div class="sheet-h"><h2 id="h-vocab">Mis palabras</h2><button type="button" class="icon-btn close" aria-label="Cerrar">×</button></div>
+  <p class="lead">Cada palabra que te enseña Lena se guarda aquí. Úsala en tus mensajes para que pase de nueva a dominada.</p>
+  <div class="seg" id="vfilter"></div>
+  <ul class="wlist" id="wlist"></ul>
+</section>
+
+<section class="sheet" id="sh-settings" role="dialog" aria-modal="true" aria-labelledby="h-settings" hidden>
+  <div class="sheet-h"><h2 id="h-settings">Ajustes</h2><button type="button" class="icon-btn close" aria-label="Cerrar">×</button></div>
+  <div class="group">
+    <h3>Conexión con Gemini</h3>
+    <div class="field"><label for="apiKey">Clave de API de Google Gemini</label><input id="apiKey" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="AIza…"></div>
+    <div class="field"><label for="modelName">Modelo</label><input id="modelName" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+    <p class="note">Por defecto se usa siempre el último modelo Flash de Google. Si ese falla o se agota su cuota gratuita, Lena prueba sola con otros modelos gratuitos. Solo tienes que tocar esto si Google cambia sus nombres.</p>
+    <div class="inline"><button type="button" class="btn primary" id="apiSave">Guardar y probar</button><p class="status" id="apiStatus"></p></div>
+  </div>
+  <div class="group">
+    <h3>Voz</h3>
+    <label class="opt"><input type="checkbox" id="autoRead"><span>Leer en voz alta las respuestas de Lena<small>Puedes volver a escuchar cualquier mensaje con «Escuchar».</small></span></label>
+    <label class="opt" id="convoOpt"><input type="checkbox" id="convoMode"><span>Modo conversación (manos libres)<small>Cuando Lena termina de hablar, se abre el micrófono, y lo que dices se envía solo.</small></span></label>
+    <label class="opt"><input type="radio" name="rate" id="rate-normal" value="normal"><span>Velocidad normal</span></label>
+    <label class="opt"><input type="radio" name="rate" id="rate-lento" value="lento"><span>Más despacio</span></label>
+    <p class="note" id="voiceNote"></p>
+    <div><button type="button" class="btn" id="voiceInstall" hidden>Instalar la voz alemana</button></div>
+  </div>
+  <div class="group">
+    <h3>Ritmo de palabras nuevas</h3>
+    <label class="opt"><input type="radio" name="pace" id="pace-muy_lento" value="muy_lento"><span>Muy lento<small>Una palabra nueva cada 6 mensajes, y solo si tienes menos de 2 por practicar.</small></span></label>
+    <label class="opt"><input type="radio" name="pace" id="pace-lento" value="lento"><span>Lento<small>Una cada 4 mensajes, con menos de 3 por practicar.</small></span></label>
+    <label class="opt"><input type="radio" name="pace" id="pace-normal" value="normal"><span>Normal<small>Una cada 3 mensajes, con menos de 4 por practicar.</small></span></label>
+  </div>
+  <div class="group">
+    <h3>Tus datos</h3>
+    <p class="note">Tu nivel, tus palabras y la conversación se guardan solo en este móvil.</p>
+    <div><button type="button" class="btn danger" id="resetBtn">Empezar de cero</button></div>
+    <div class="confirm" id="resetConfirm" hidden>
+      <p>Se borrarán tu nivel, tus palabras y la conversación. Tu clave de Gemini se mantiene. Esto no se puede deshacer.</p>
+      <div class="btns"><button type="button" class="btn primary" id="resetYes">Borrar todo</button><button type="button" class="btn" id="resetNo">Cancelar</button></div>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" id="sh-topics" role="dialog" aria-modal="true" aria-labelledby="h-topics" hidden>
+  <div class="sheet-h"><h2 id="h-topics">Nuevo tema</h2><button type="button" class="icon-btn close" aria-label="Cerrar">×</button></div>
+  <p class="lead">Empiezas una conversación nueva. Tu nivel y tus palabras se mantienen.</p>
+  <div class="topics" id="topics2"></div>
+</section>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(function(){
+'use strict';
+var $ = function(id){ return document.getElementById(id); };
+function h(tag, cls, text){ var e=document.createElement(tag); if(cls) e.className=cls; if(text!=null) e.textContent=text; return e; }
+
+/* Android bridge (present inside the APK); in a normal browser the app falls back to web APIs for testing. */
+var NATIVE = typeof window.Android !== 'undefined' && window.Android !== null;
+var API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/';
+var MODEL_DEFAULT = 'gemini-flash-latest';
+/* Tried in order when a model is missing or its free quota runs out. */
+var MODEL_FALLBACKS = ['gemini-flash-latest','gemini-flash-lite-latest','gemini-3.8-flash','gemini-3.5-flash-lite','gemini-2.5-flash'];
+
+var SVG = {
+  speak:'<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>',
+  slow:'<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 9.5a3.5 3.5 0 0 1 0 5"/></svg>',
+  tr:'<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h9M7.5 3v2M5 5c1 3 3.5 5.5 6.5 6.5M10 5c-.8 3.5-3.4 6.4-6.5 8"/><path d="m13 21 4-9 4 9M14.5 18h5"/></svg>',
+  bulb:'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg>'
+};
+
+/* ---------- Content ---------- */
+var TOPICS = {
+  alltag:{de:'Mein Alltag', es:'Tu día a día', brief:"Everyday life: the learner's normal day, routines, home, work or studies."},
+  essen:{de:'Essen und Trinken', es:'Comida y bebida', brief:'Food and drink: favourite dishes, cooking, eating out, Spanish versus German food.'},
+  wochenende:{de:'Am Wochenende', es:'El fin de semana', brief:'The weekend: what the learner did last weekend (good Perfekt practice) and plans for the next one.'},
+  reisen:{de:'Reisen', es:'Viajes', brief:'Travel: past trips, holidays, places the learner wants to visit, transport.'},
+  arbeit:{de:'Arbeit und Studium', es:'Trabajo y estudios', brief:"Work and studies: the learner's job or studies, colleagues, a typical working day."},
+  familie:{de:'Familie und Freunde', es:'Familia y amigos', brief:"Family and friends: people in the learner's life and what they do together."},
+  cafe:{de:'Im Café', es:'Juego de rol: pedir algo', brief:'Role play: Lena is a friendly waitress in a café in Berlin and the learner is a customer who orders food and drinks, asks about prices and pays. Stay in the role, but still give corrections.'},
+  frei:{de:'Freies Gespräch', es:'De lo que quieras', brief:"Free conversation: follow whatever the learner wants to talk about and ask about their interests."}
+};
+var LEVELS = [
+  {min:0,  code:'A2', name:'inicial', key:'A2.1', desc:'very short, simple sentences; present tense and Perfekt with common verbs; very frequent everyday words; no subordinate clauses.'},
+  {min:30, code:'A2', name:'medio',   key:'A2.2', desc:'short sentences; present tense, Perfekt and modal verbs (können, müssen, wollen, möchten); connectors und, aber, oder, denn, dann; an occasional weil-clause.'},
+  {min:40, code:'A2', name:'alto',    key:'A2.3', desc:'everyday sentences with Perfekt, modal verbs, separable verbs, comparatives and weil/dass/wenn clauses; somewhat more varied vocabulary.'},
+  {min:50, code:'B1', name:'inicial', key:'B1.1', desc:'natural everyday German; Präteritum of common verbs (war, hatte, konnte), Konjunktiv II (würde, hätte, könnte), relative clauses; wider vocabulary.'},
+  {min:60, code:'B1', name:'medio',   key:'B1.2', desc:'fluent everyday conversation with opinions and reasons, common idiomatic expressions, all main tenses.'},
+  {min:70, code:'B1', name:'alto',    key:'B1.3', desc:'rich, natural German with idioms and nuanced opinions; passive voice where natural.'},
+  {min:80, code:'B2', name:'',        key:'B2',   desc:'natural, varied German as with an advanced learner; idioms and nuanced expressions.'}
+];
+var PACES = { muy_lento:{gap:6,max:2}, lento:{gap:4,max:3}, normal:{gap:3,max:4} };
+var STATUS = [{label:'Nueva',cls:'s0'},{label:'Practicando',cls:'s1'},{label:'Dominada',cls:'s2'}];
+
+function DEFAULTS(){ return {
+  profile:{score:32, msgs:0, recent:[], turnsSinceNew:3, streak:0, lastDay:null, settings:{autoRead:true, rate:'normal', pace:'muy_lento', convo:false}},
+  vocab:{words:[]},
+  chat:{topic:null, messages:[]}
+}; }
+var D0 = DEFAULTS(); var P = D0.profile, V = D0.vocab, C = D0.chat;
+
+/* ---------- Runtime state ---------- */
+var busy=false, typing=false, callSeq=0, pendingError=null, listening=false;
+var openEs = new Set(); var vfilter='all';
+
+/* ---------- Helpers ---------- */
+function clampInt(v,lo,hi){ if(v==null||v==='') return null; var n=Number(v); if(!isFinite(n)) return null; return Math.max(lo,Math.min(hi,Math.round(n))); }
+function levelIdx(s){ var i=0; for(var k=0;k<LEVELS.length;k++){ if(s>=LEVELS[k].min) i=k; } return i; }
+function levelLabel(i){ var L=LEVELS[i]; return L.name ? L.code+' · '+L.name : L.code; }
+function levelProgress(s){ var i=levelIdx(s); var lo=i===0?20:LEVELS[i].min; var hi=i===LEVELS.length-1?100:LEVELS[i+1].min; return Math.max(0,Math.min(1,(s-lo)/(hi-lo))); }
+function wstatus(w){ var u=w.uses||0; return u>=3?2:(u>=1?1:0); }
+function wkey(s){ return String(s||'').toLowerCase().trim().replace(/^(der|die|das|ein|eine|sich)\s+/,'').replace(/[^a-zäöüß\s-]/g,'').replace(/\s+/g,' ').trim(); }
+function findWord(s){ var k=wkey(s); if(!k) return null; for(var i=0;i<V.words.length;i++){ if(wkey(V.words[i].de)===k) return V.words[i]; } return null; }
+function pendingWords(){ return V.words.filter(function(w){ return wstatus(w)<2 && (P.msgs-(w.at||0))<25; }); }
+function canIntroduce(){ var p=PACES[P.settings.pace]||PACES.muy_lento; return (P.turnsSinceNew||0)>=p.gap && pendingWords().length<p.max; }
+function focusWord(){ var c=pendingWords().filter(function(w){ return P.msgs-(w.at||0)>=1; }).sort(function(a,b){ return (a.lastAsk||0)-(b.lastAsk||0); }); return c[0]||null; }
+function dayStr(d){ d=d||new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function yesterday(){ var d=new Date(); d.setDate(d.getDate()-1); return dayStr(d); }
+function liveStreak(){ return (P.lastDay===dayStr()||P.lastDay===yesterday()) ? (P.streak||0) : 0; }
+function updateStreak(){ var t=dayStr(); if(P.lastDay===t) return; P.streak = P.lastDay===yesterday() ? (P.streak||0)+1 : 1; P.lastDay=t; }
+function tokens(s){ return String(s||'').split(/\s+/).filter(Boolean); }
+function nk(w){ return w.toLowerCase().replace(/[.,!?;:"'„“”‚‘’«»()¿¡…–—-]/g,''); }
+function normSent(s){ return tokens(s).map(nk).filter(Boolean).join(' '); }
+function markDiff(orig, corr){
+  var a=tokens(orig).map(nk), bt=tokens(corr), b=bt.map(nk), n=a.length, m=b.length;
+  if(n*m>40000) return bt.map(function(t){ return {t:t,changed:false}; });
+  var dp=[]; for(var i=0;i<=n;i++){ dp.push(new Array(m+1).fill(0)); }
+  for(i=n-1;i>=0;i--) for(var j=m-1;j>=0;j--) dp[i][j] = a[i]===b[j] ? dp[i+1][j+1]+1 : Math.max(dp[i+1][j], dp[i][j+1]);
+  var keep=new Set(); i=0; j=0;
+  while(i<n&&j<m){ if(a[i]===b[j]){ keep.add(j); i++; j++; } else if(dp[i+1][j]>=dp[i][j+1]) i++; else j++; }
+  return bt.map(function(t,k){ return {t:t, changed: !keep.has(k) && nk(t)!==''}; });
+}
+
+/* ---------- Storage (on this phone) ---------- */
+function kvGet(k){ try{ if(NATIVE) return window.Android.load(k); return localStorage.getItem(k); }catch(e){ return null; } }
+function kvSet(k,v){ try{ if(NATIVE) window.Android.save(k,v); else localStorage.setItem(k,v); }catch(e){} }
+function bodyOf(n){ return n==='profile'?P : n==='vocab'?V : C; }
+function save(){ for(var i=0;i<arguments.length;i++){ var n=arguments[i]; kvSet('lena.'+n, JSON.stringify(bodyOf(n))); } }
+function readJSON(k){ var s=kvGet(k); if(!s) return null; try{ return JSON.parse(s); }catch(e){ return null; } }
+function loadAll(){
+  var d=DEFAULTS(), p=readJSON('lena.profile'), v=readJSON('lena.vocab'), c=readJSON('lena.chat');
+  if(p && typeof p==='object'){ P=Object.assign(d.profile,p); P.settings=Object.assign(DEFAULTS().profile.settings, p.settings||{}); if(!Array.isArray(P.recent)) P.recent=[]; if(typeof P.score!=='number') P.score=32; }
+  if(v && Array.isArray(v.words)) V={words:v.words};
+  if(c && typeof c==='object') C={topic:TOPICS[c.topic]?c.topic:null, messages:Array.isArray(c.messages)?c.messages:[]};
+}
+function getKey(){ return (kvGet('lena.apiKey')||'').trim(); }
+function getModel(){ return (kvGet('lena.model')||'').trim() || MODEL_DEFAULT; }
+
+/* ---------- Gemini API ---------- */
+var reqSeq=0, pendingReq={}, workingModel=null;
+var SYSTEM='You are the engine of a German-learning app. Always answer with exactly the JSON object the user asks for and nothing else: no Markdown, no code fences, no comments.';
+window.__httpDone = function(id, status, text){ var p=pendingReq[id]; if(!p) return; delete pendingReq[id]; p(status, text||''); };
+function rawPost(url, body, key){
+  return new Promise(function(resolve){
+    var headers={'x-goog-api-key':key, 'content-type':'application/json'};
+    var payload=JSON.stringify(body);
+    if(NATIVE){
+      var id='r'+(++reqSeq);
+      pendingReq[id]=function(s,t){ resolve({status:s, text:t}); };
+      try{ window.Android.request(url, JSON.stringify(headers), payload, id); }
+      catch(e){ delete pendingReq[id]; resolve({status:-1, text:String(e)}); }
+    } else {
+      fetch(url,{method:'POST', headers:headers, body:payload})
+        .then(function(r){ return r.text().then(function(t){ resolve({status:r.status, text:t}); }); })
+        .catch(function(e){ resolve({status:-1, text:String(e)}); });
+    }
+  });
+}
+function classify(status, text){
+  var msg='', st='', det='';
+  try{ var j=JSON.parse(text); if(Array.isArray(j)) j=j[0]; var e=j&&j.error; if(e){ msg=String(e.message||''); st=String(e.status||''); det=JSON.stringify(e.details||''); } }catch(x){}
+  var all=msg+' '+det;
+  if(status===-1) return {code:'network', message:msg||text};
+  if(/API_KEY_INVALID|API key not valid|API key expired|API_KEY_EXPIRED/i.test(all)) return {code:'auth', message:msg};
+  if(/location is not supported|not available in your country/i.test(msg)) return {code:'region', message:msg};
+  if(status===429 || st==='RESOURCE_EXHAUSTED') return {code: /limit:\s*0\b/.test(all) ? 'noquota' : 'quota', message:msg};
+  if(status===404 || st==='NOT_FOUND') return {code:'model', message:msg};
+  if(status===400 && /thinking/i.test(msg)) return {code:'thinking', message:msg};
+  if(status===400 && /model/i.test(msg)) return {code:'model', message:msg};
+  if(status===403 || st==='PERMISSION_DENIED') return {code:'forbidden', message:msg};
+  if(status===500 || status===503 || status===504 || st==='UNAVAILABLE' || st==='INTERNAL') return {code:'overloaded', message:msg};
+  return {code:'upstream', message:msg||('HTTP '+status)};
+}
+function modelOrder(){
+  var list=[];
+  [workingModel, getModel()].concat(MODEL_FALLBACKS).forEach(function(m){ if(m && list.indexOf(m)<0) list.push(m); });
+  return list;
+}
+function thinkingCfgOff(model){ return kvGet('lena.noThink.'+model)==='1'; }
+async function geminiOnce(model, key, prompt, opts){
+  var gen={temperature:0.8, maxOutputTokens:opts.maxTokens||4096};
+  if(opts.json) gen.responseMimeType='application/json';
+  if(!thinkingCfgOff(model)) gen.thinkingConfig={thinkingLevel:'low'};
+  var body={contents:[{role:'user', parts:[{text:prompt}]}], generationConfig:gen};
+  if(opts.system) body.systemInstruction={parts:[{text:opts.system}]};
+  var res=await rawPost(API_BASE+encodeURIComponent(model)+':generateContent', body, key);
+  if(res.status!==200){
+    var err=classify(res.status, res.text);
+    if(err.code==='thinking' && !thinkingCfgOff(model)){ kvSet('lena.noThink.'+model,'1'); return geminiOnce(model, key, prompt, opts); }
+    throw err;
+  }
+  var data=null; try{ data=JSON.parse(res.text); }catch(e){ throw {code:'invalid_json'}; }
+  var cand=data&&Array.isArray(data.candidates)?data.candidates[0]:null;
+  if(!cand){ if(data&&data.promptFeedback&&data.promptFeedback.blockReason) throw {code:'refused'}; throw {code:'invalid_json'}; }
+  var parts=(cand.content&&Array.isArray(cand.content.parts))?cand.content.parts:[];
+  var txt=parts.filter(function(p){ return p && typeof p.text==='string' && !p.thought; }).map(function(p){ return p.text; }).join('');
+  if(!txt.trim()){ if(/SAFETY|PROHIBITED|BLOCKLIST|SPII/.test(String(cand.finishReason||''))) throw {code:'refused'}; throw {code:'invalid_json'}; }
+  return txt;
+}
+async function geminiText(prompt, opts, keyOverride){
+  var key=keyOverride||getKey();
+  if(!key) throw {code:'no_key'};
+  var models=modelOrder(), lastErr=null;
+  for(var i=0;i<models.length;i++){
+    try{
+      var t=await geminiOnce(models[i], key, prompt, opts||{});
+      workingModel=models[i];
+      return t;
+    }catch(e){
+      lastErr=e;
+      /* Move on to the next model only when this one is missing or out of free quota. */
+      if(!(e && (e.code==='model'||e.code==='quota'||e.code==='noquota'))) throw e;
+    }
+  }
+  throw lastErr||{code:'upstream'};
+}
+function parseLoose(t){
+  try{ return JSON.parse(t); }catch(e){}
+  var m=t.match(/```(?:json)?\s*([\s\S]*?)```/); if(m){ try{ return JSON.parse(m[1]); }catch(e){} }
+  var a=t.indexOf('{'), b=t.lastIndexOf('}'); if(a>=0&&b>a){ try{ return JSON.parse(t.slice(a,b+1)); }catch(e){} }
+  return null;
+}
+async function aiJSON(prompt){
+  var t=await geminiText(prompt, {json:true, system:SYSTEM, maxTokens:4096});
+  var j=parseLoose(t);
+  if(Array.isArray(j) && j[0] && typeof j[0]==='object') j=j[0];
+  if(!j||typeof j!=='object'||Array.isArray(j)) throw {code:'invalid_json'};
+  return j;
+}
+async function testKey(key){ await geminiText('Antworte nur mit: Hallo!', {maxTokens:512}, key); return true; }
+
+/* ---------- Voice: speaking ---------- */
+var webTts = (!NATIVE && 'speechSynthesis' in window && typeof window.SpeechSynthesisUtterance!=='undefined') ? window.speechSynthesis : null;
+var deVoice=null, curBtn=null, curUtt=null, afterSpeak=null, uttSeq=0;
+function pickVoice(){ try{ var vs=webTts.getVoices()||[]; var de=vs.filter(function(v){ return /^de([-_]|$)/i.test(v.lang); }); deVoice=de.find(function(v){ return /de[-_]DE/i.test(v.lang); })||de[0]||null; }catch(e){} }
+if(webTts){ pickVoice(); try{ webTts.addEventListener('voiceschanged', pickVoice); }catch(e){} }
+function ttsState(){ if(NATIVE){ try{ return window.Android.ttsStatus()||'error'; }catch(e){ return 'error'; } } return webTts?'ok':'none'; }
+function baseRate(){ return P.settings.rate==='lento' ? 0.8 : 1.0; }
+function speechEnded(id){
+  if(id!==curUtt) return;
+  curUtt=null;
+  if(curBtn){ curBtn.classList.remove('speaking'); curBtn=null; }
+  var f=afterSpeak; afterSpeak=null; if(f) f();
+}
+window.__ttsDone = function(id){ speechEnded(id); };
+function stopSpeaking(){
+  afterSpeak=null;
+  try{ if(NATIVE) window.Android.stopSpeaking(); else if(webTts) webTts.cancel(); }catch(e){}
+  if(curBtn){ curBtn.classList.remove('speaking'); curBtn=null; }
+  curUtt=null;
+}
+function speak(text, rate, btn, then){
+  if(btn && btn===curBtn){ stopSpeaking(); return; }
+  var st=ttsState();
+  if(st!=='ok'){
+    if(st==='nolang') toast('Falta la voz alemana en tu móvil. Instálala desde Ajustes → Voz.');
+    else if(st==='loading') toast('La voz se está preparando. Inténtalo en un momento.');
+    else toast('Tu móvil no puede leer en voz alta ahora mismo.');
+    return;
+  }
+  stopSpeaking();
+  var id='u'+(++uttSeq); curUtt=id; afterSpeak=then||null;
+  if(btn){ curBtn=btn; btn.classList.add('speaking'); }
+  if(NATIVE){ try{ window.Android.speak(text, rate||baseRate(), id); }catch(e){ speechEnded(id); } }
+  else {
+    var u=new SpeechSynthesisUtterance(text); u.lang='de-DE'; if(deVoice) u.voice=deVoice; u.rate=(rate||baseRate())*0.95;
+    u.onend=u.onerror=function(){ speechEnded(id); };
+    try{ webTts.speak(u); }catch(e){ speechEnded(id); }
+  }
+}
+
+/* ---------- Voice: listening ---------- */
+window.__speechResult = function(text){
+  setListening(false);
+  text=String(text||'').trim(); if(!text) return;
+  var inp=$('input'); var base=inp.value.trim();
+  inp.value = base ? base+' '+text : text; autoGrow(); updateComposer();
+  if(P.settings.convo) send();
+};
+window.__speechError = function(code){
+  setListening(false);
+  if(code==='unavailable') toast('Tu móvil no tiene reconocimiento de voz. Instala la app de Google o usa el micrófono del teclado.');
+};
+function setListening(on){ listening=on; $('micBtn').classList.toggle('listening', on); }
+function startListening(){
+  if(busy) return;
+  stopSpeaking();
+  if(NATIVE){ setListening(true); try{ window.Android.listen('de-DE'); }catch(e){ setListening(false); toast('No se ha podido abrir el micrófono.'); } return; }
+  var inp=$('input'); inp.focus();
+  if(kvGet('lena.micTip')!=='1'){ $('micTipText').textContent='Para hablar: toca el micrófono de tu teclado y di la frase en alemán.'; $('micTip').hidden=false; }
+}
+
+/* ---------- Toast & notice ---------- */
+var toastQ=[], toastOn=false;
+function toast(msg){ toastQ.push(msg); if(!toastOn) nextToast(); }
+function nextToast(){ var t=$('toast'); if(!toastQ.length){ t.hidden=true; toastOn=false; return; } toastOn=true; t.textContent=toastQ.shift(); t.hidden=false; setTimeout(nextToast, 3200); }
+function setNotice(msg){ var n=$('notice'); if(msg){ n.textContent=msg; n.hidden=false; } else n.hidden=true; }
+
+/* ---------- Prompts ---------- */
+function historyText(n){
+  return C.messages.filter(function(m){ return m.role==='lena'||m.role==='me'; }).slice(-n)
+    .map(function(m){ return (m.role==='lena'?'Lena: ':'Learner: ')+m.de; }).join('\n');
+}
+function buildPrompt(o){
+  var li=levelIdx(P.score), L=LEVELS[li], T=TOPICS[C.topic]||TOPICS.frei;
+  var pendW=pendingWords().map(function(w){ return w.de; });
+  var known=V.words.map(function(w){ return w.de; }).slice(-200);
+  var out=[];
+  out.push('You are Lena, a warm, patient and encouraging German tutor. You chat with a native Spanish speaker from Spain who is learning German, inside a practice app on their phone. They type or dictate their messages, so ignore punctuation and obvious speech-recognition glitches.');
+  out.push('');
+  out.push('LEARNER');
+  out.push('- Current level: '+L.key+'. Speak at this level: '+L.desc);
+  out.push('- Topic: '+T.brief);
+  out.push('- Words the learner is practising now: '+(pendW.length?pendW.join('; '):'none yet')+'.');
+  out.push('- Words already taught (never present them as new): '+(known.length?known.join('; '):'none yet')+'.');
+  if(o.allowNew) out.push('- NEW WORD THIS TURN: introduce exactly ONE new German word or short everyday expression that fits the conversation, is useful in daily life and is only slightly above the learner\'s level. Use it naturally in your reply and describe it in "new_word".');
+  else out.push('- NO new vocabulary this turn: set "new_word" to null and only use words the learner can understand.'+(o.focus?' If it fits naturally, ask something that invites the learner to use "'+o.focus.de+'".':''));
+  out.push('');
+  out.push('HOW TO REPLY');
+  out.push('- Write your reply in German only: 1 to 3 short sentences (at most about 35 words), friendly and natural, like chatting with a friend. Usually end with ONE simple question so the conversation continues.');
+  out.push('- React to what the learner actually said before moving on. Keep the topic going and vary your questions.');
+  out.push('- Check the learner\'s last message. If it has mistakes (verb form, word order, article or gender, case, preposition, wrong word, important spelling), put the full corrected version in "correction.corrected" and explain the single most important mistake in simple Spanish in "correction.note_es" (at most 20 words). Do not correct punctuation or a missing capital letter on its own. If the message is correct, "correction" is null. Never invent mistakes.');
+  out.push('- If the learner writes in Spanish or mixes in Spanish words, put how to say it in German in "correction.corrected", and in "correction.note_es" encourage them in Spanish to try it in German. Then reply in simple German.');
+  out.push('- If the learner asks what something means or how to say something, answer briefly inside your German reply and continue the conversation.');
+  out.push('- Never more than one correction and one new word per turn. Be encouraging.');
+  out.push('');
+  out.push('OUTPUT: reply with ONLY one JSON object, no other text, with exactly these keys:');
+  out.push('{"reply": "your German message",');
+  out.push(' "reply_es": "natural Spanish (Spain) translation of reply",');
+  out.push(' "correction": null or {"corrected": "corrected German version of the learner\'s last message", "note_es": "short explanation in Spanish"},');
+  out.push(' "new_word": null or {"de": "the word, with article for nouns (der Ausflug) or infinitive for verbs (sich ausruhen)", "es": "Spanish meaning", "example": "a short German example sentence, different from your reply"},');
+  out.push(' "used_words": ["practising words, written exactly as listed above, that the learner used correctly in their last message"],');
+  out.push(' "quality": 0-3 for the learner\'s last message (0 = no German or only Spanish, 1 = understandable but many mistakes, 2 = small mistakes, 3 = correct) or null,');
+  out.push(' "complexity": 1-5 for how ambitious the learner\'s last message was (1 = one or two words, 3 = one full simple sentence, 5 = several clauses or a subordinate clause) or null}');
+  out.push('');
+  if(o.opener){
+    out.push('The learner has not written anything yet. Open the conversation: greet them briefly and ask ONE easy question about the topic. Use "correction": null, "used_words": [], "quality": null, "complexity": null.');
+  } else {
+    out.push('CONVERSATION SO FAR (oldest first):');
+    out.push(historyText(20));
+    out.push('');
+    out.push('Now reply to the learner\'s LAST message.');
+  }
+  return out.join('\n');
+}
+function hintPrompt(){
+  var L=LEVELS[levelIdx(P.score)];
+  return [
+    'A native Spanish speaker learning German (level '+L.key+': '+L.desc+') is chatting with their tutor Lena and does not know how to answer her last message.',
+    '',
+    'Recent conversation (oldest first):',
+    historyText(8),
+    '',
+    "Help the learner answer Lena's LAST message without writing the whole answer for them. Reply with ONLY one JSON object:",
+    '{"hint_es": "1 or 2 short sentences in Spanish: what Lena is asking and an idea for how to answer",',
+    ' "starter_de": "the beginning of a German answer the learner can finish, ending with …",',
+    ' "words": [up to 3 useful words for the answer as {"de": "German, with article for nouns", "es": "Spanish"}]}'
+  ].join('\n');
+}
+
+/* ---------- Talking to Lena ---------- */
+function errCopy(e){
+  switch(e&&e.code){
+    case 'no_key': return 'Falta tu clave de Gemini. Añádela para que Lena pueda responder.';
+    case 'auth': return 'La clave de Gemini no es válida. Revísala en Ajustes.';
+    case 'forbidden': return 'Google no permite usar esta clave con Gemini. Crea una clave nueva en aistudio.google.com/apikey.';
+    case 'region': return 'Google dice que la API de Gemini no está disponible desde tu ubicación.';
+    case 'model': return 'Ninguno de los modelos de Gemini responde. Escribe en Ajustes el nombre de un modelo actual (aparecen en aistudio.google.com).';
+    case 'noquota': return 'Tu cuenta de Google no tiene cuota gratuita para estos modelos. Prueba con otro modelo en Ajustes.';
+    case 'quota': return 'Has llegado al límite gratuito de Gemini por ahora. Espera un rato (el límite diario se renueva cada día) y pulsa «Reintentar».';
+    case 'refused': return 'Gemini no ha querido responder a ese mensaje. Prueba a escribirlo de otra forma.';
+    case 'overloaded': return 'Gemini está saturado ahora mismo. Pulsa «Reintentar» en unos segundos.';
+    case 'network': return 'No hay conexión a internet. Compruébala y pulsa «Reintentar».';
+    case 'invalid_json': return 'Lena se ha liado con la respuesta. Pulsa «Reintentar».';
+    default: return 'No se ha podido hablar con Lena'+(e&&e.message?' ('+e.message+')':'')+'. Pulsa «Reintentar».';
+  }
+}
+function needsSettings(e){ return e && (e.code==='no_key'||e.code==='auth'||e.code==='forbidden'||e.code==='model'||e.code==='noquota'||e.code==='region'); }
+async function askLena(opener){
+  var id=++callSeq;
+  busy=true; typing='lena'; pendingError=null; renderChat(); updateComposer();
+  var allowNew = !opener && canIntroduce();
+  var focus = (!opener && !allowNew) ? focusWord() : null;
+  var r=null, err=null;
+  try{
+    r = await aiJSON(buildPrompt({opener:opener, allowNew:allowNew, focus:focus}));
+    if(typeof r.reply!=='string' || !r.reply.trim()) err={code:'invalid_json'};
+  }catch(e){ err = e || {code:'upstream'}; }
+  if(id!==callSeq) return;
+  busy=false; typing=false;
+  if(err){ pendingError={text:errCopy(err), opener:opener, settings:needsSettings(err)}; renderChat(); updateComposer(); return; }
+  applyReply(r, opener, allowNew, focus);
+}
+function applyReply(r, opener, allowNew, focus){
+  var before=levelIdx(P.score), notes=[];
+  if(!opener){
+    var me=null; for(var i=C.messages.length-1;i>=0;i--){ if(C.messages[i].role==='me'){ me=C.messages[i]; break; } }
+    var q=clampInt(r.quality,0,3), cx=clampInt(r.complexity,1,5);
+    if(me){
+      var cor=r.correction;
+      if(cor && typeof cor.corrected==='string' && cor.corrected.trim() && normSent(cor.corrected)!==normSent(me.de)){
+        me.fix={de:cor.corrected.trim(), note:String(cor.note_es||'').trim(), es:q===0};
+      }
+      if(q!=null) me.q=q;
+    }
+    P.msgs=(P.msgs||0)+1;
+    if(q!=null){
+      P.recent=(P.recent||[]).concat([q]).slice(-20);
+      P.score += q===3 ? (0.5+(cx!=null&&cx>=4?0.3:0)) : q===2 ? 0.25 : q===1 ? -0.3 : 0;
+    }
+    (Array.isArray(r.used_words)?r.used_words:[]).forEach(function(u){
+      var w=findWord(u);
+      if(w && w.lastUse!==P.msgs){ w.uses=(w.uses||0)+1; w.lastUse=P.msgs; if(w.uses===3){ P.score+=1; notes.push('¡Palabra dominada: '+w.de+'!'); } }
+    });
+    updateStreak();
+    P.turnsSinceNew=(P.turnsSinceNew||0)+1;
+    if(focus) focus.lastAsk=P.msgs;
+  }
+  var nw=null, rn=r.new_word;
+  if(allowNew && rn && typeof rn==='object' && typeof rn.de==='string' && rn.de.trim() && !findWord(rn.de)){
+    nw={de:rn.de.trim(), es:String(rn.es||'').trim(), ex:String(rn.example||'').trim(), uses:0, at:P.msgs||0, topic:C.topic};
+    V.words.push(nw); P.turnsSinceNew=0;
+  }
+  P.score=Math.round(Math.max(15,Math.min(95,P.score))*100)/100;
+  var msg={role:'lena', de:r.reply.trim(), es:String(r.reply_es||'').trim(), t:Date.now()};
+  if(nw) msg.nw={de:nw.de, es:nw.es, ex:nw.ex};
+  C.messages.push(msg); trimChat();
+  var after=levelIdx(P.score); if(after>before) notes.push('¡Subes de nivel! Ahora: '+levelLabel(after));
+  renderAll(); scrollDown();
+  notes.forEach(toast);
+  save('chat','profile','vocab');
+  var convo = P.settings.convo && NATIVE;
+  if(P.settings.autoRead || convo){
+    var b=document.querySelector('#msgs li.lena:last-of-type .act[data-k="speak"]');
+    if(ttsState()==='ok') speak(msg.de, null, b, convo ? function(){ setTimeout(startListening, 250); } : null);
+    else if(convo) startListening();
+  }
+}
+async function getHint(){
+  if(busy) return;
+  if(!C.messages.some(function(m){ return m.role==='lena'; })) return;
+  var id=++callSeq; stopSpeaking();
+  busy=true; typing='hint'; pendingError=null; renderChat(); updateComposer();
+  var r=null, err=null;
+  try{ r = await aiJSON(hintPrompt()); if(typeof r.hint_es!=='string'||!r.hint_es.trim()) err={code:'invalid_json'}; }
+  catch(e){ err=e||{code:'upstream'}; }
+  if(id!==callSeq) return;
+  busy=false; typing=false;
+  if(err){ toast(errCopy(err).replace(' Pulsa «Reintentar».','').replace(' y pulsa «Reintentar»','').replace(' Pulsa «Reintentar» en unos segundos.','')); renderChat(); updateComposer(); return; }
+  var words=Array.isArray(r.words)?r.words.filter(function(w){ return w&&typeof w.de==='string'&&w.de.trim(); }).slice(0,3).map(function(w){ return {de:String(w.de).trim(), es:String(w.es||'').trim()}; }):[];
+  C.messages.push({role:'hint', es:r.hint_es.trim(), starter:String(r.starter_de||'').trim(), words:words, t:Date.now()});
+  trimChat(); renderChat(); updateComposer(); scrollDown(); save('chat');
+}
+function trimChat(){ if(C.messages.length>60) C.messages=C.messages.slice(-60); }
+
+function send(){
+  var text=$('input').value.trim();
+  if(!text||busy) return;
+  if(!getKey()){ showSetup(); toast('Primero añade tu clave de Gemini.'); return; }
+  stopSpeaking();
+  if(!C.topic){ C.topic='frei'; }
+  pendingError=null;
+  C.messages.push({role:'me', de:text, t:Date.now()});
+  trimChat();
+  $('input').value=''; autoGrow();
+  renderAll(); scrollDown(); save('chat');
+  askLena(false);
+}
+function startTopic(id){
+  if(!getKey()){ showSetup(); toast('Primero añade tu clave de Gemini.'); return; }
+  stopSpeaking();
+  callSeq++; busy=false; typing=false;
+  C={topic:id, messages:[]}; pendingError=null; openEs.clear();
+  closeSheets(); renderAll(); save('chat');
+  askLena(true);
+}
+
+/* ---------- Rendering ---------- */
+function actBtn(icon, label, k, aria){ var b=h('button','act'); b.type='button'; b.innerHTML=SVG[icon]; b.append(h('span',null,label)); b.dataset.k=k; if(aria) b.setAttribute('aria-label',aria); return b; }
+function miniSpeak(text, label){ var b=h('button','mini'); b.type='button'; b.innerHTML=SVG.speak; b.setAttribute('aria-label',label||'Escuchar'); b.addEventListener('click',function(){ speak(text,null,b); }); return b; }
+function renderMsg(m){
+  var li=h('li','m '+(m.role==='me'?'me':m.role==='hint'?'hint':'lena'));
+  if(m.role==='lena'){
+    li.append(h('div','who','Lena'));
+    var bub=h('div','bubble',m.de); bub.lang='de'; li.append(bub);
+    var es=h('div','es',m.es||''); es.hidden=!openEs.has(m.t); li.append(es);
+    if(m.nw){
+      var card=h('div','card'); var ch=h('div','card-h'); ch.append(h('span',null,'Palabra nueva'), miniSpeak(m.nw.de+(m.nw.ex?'. '+m.nw.ex:''),'Escuchar la palabra nueva')); card.append(ch);
+      var cw=h('div','card-w',m.nw.de); cw.lang='de'; card.append(cw);
+      if(m.nw.es) card.append(h('div','card-es',m.nw.es));
+      if(m.nw.ex){ var cx=h('div','card-ex',m.nw.ex); cx.lang='de'; card.append(cx); }
+      li.append(card);
+    }
+    var acts=h('div','actions');
+    var b1=actBtn('speak','Escuchar','speak','Escuchar a Lena'); b1.addEventListener('click',function(){ speak(m.de,null,b1); });
+    var b2=actBtn('slow','Lento','slow','Escuchar despacio'); b2.addEventListener('click',function(){ speak(m.de,0.65,b2); });
+    acts.append(b1,b2);
+    if(m.es){ var b3=actBtn('tr','Traducir','tr','Ver traducción al español'); b3.setAttribute('aria-pressed', openEs.has(m.t)?'true':'false');
+      b3.addEventListener('click',function(){ if(openEs.has(m.t)) openEs.delete(m.t); else openEs.add(m.t); es.hidden=!openEs.has(m.t); b3.setAttribute('aria-pressed', openEs.has(m.t)?'true':'false'); });
+      acts.append(b3); }
+    li.append(acts);
+  } else if(m.role==='me'){
+    var mb=h('div','bubble',m.de); mb.lang='de'; li.append(mb);
+    if(m.fix){
+      var fx=h('div','fix'); var fh=h('div','fix-h'); fh.append(h('span','lab', m.fix.es?'En alemán':'Mejor así'), miniSpeak(m.fix.de,'Escuchar la frase correcta')); fx.append(fh);
+      var de=h('span','de'); de.lang='de';
+      if(m.fix.es) de.textContent=m.fix.de;
+      else markDiff(m.de,m.fix.de).forEach(function(tk,k){ if(k) de.append(' '); if(tk.changed) de.append(h('mark',null,tk.t)); else de.append(tk.t); });
+      fx.append(de);
+      if(m.fix.note) fx.append(h('span','note',m.fix.note));
+      li.append(fx);
+    }
+  } else if(m.role==='hint'){
+    var hc=h('div','hintcard'); var lab=h('div','lab'); lab.innerHTML=SVG.bulb; lab.append(h('span',null,'Pista')); hc.append(lab);
+    hc.append(h('p',null,m.es));
+    if(m.starter){ var st=h('div','starter'); var q=h('q',null,m.starter); q.lang='de'; var use=h('button','btn','Usar'); use.type='button';
+      use.addEventListener('click',function(){ var inp=$('input'); inp.value=m.starter.replace(/\s*(…|\.\.\.)\s*$/,' '); autoGrow(); updateComposer(); inp.focus(); try{ inp.setSelectionRange(inp.value.length,inp.value.length); }catch(e){} });
+      st.append(q,use); hc.append(st); }
+    if(m.words&&m.words.length){ var hw=h('div','hwords'); m.words.forEach(function(w){ var s=h('span','hword'); var b=h('b',null,w.de); b.lang='de'; s.append(b); if(w.es) s.append(' · '+w.es); hw.append(s); }); hc.append(hw); }
+    li.append(hc);
+  }
+  return li;
+}
+function renderChat(){
+  var hasKey=!!getKey();
+  $('welcome').hidden=!!C.topic;
+  $('setup').hidden=hasKey;
+  document.querySelectorAll('#topics .topic').forEach(function(b){ b.disabled=!hasKey; });
+  $('topicbar').hidden=!C.topic;
+  $('phrases').hidden=!C.topic;
+  if(C.topic) $('topicName').textContent=(TOPICS[C.topic]||TOPICS.frei).de;
+  var list=$('msgs');
+  var nodes=C.messages.map(renderMsg);
+  if(typing){ var t=h('li','m lena'); t.append(h('div','who', typing==='hint'?'Pista':'Lena')); var b=h('div','bubble typing'); b.setAttribute('aria-label','Lena está escribiendo'); b.append(h('i'),h('i'),h('i')); t.append(b); nodes.push(t); }
+  if(pendingError){
+    var e=h('li','err'); e.append(h('p',null,pendingError.text));
+    if(pendingError.settings){ var sb=h('button','btn primary','Abrir ajustes'); sb.type='button'; sb.addEventListener('click',function(){ showSheet('sh-settings'); }); e.append(sb); }
+    var rb=h('button','btn'+(pendingError.settings?'':' primary'),'Reintentar'); rb.type='button'; var op=pendingError.opener; rb.addEventListener('click',function(){ askLena(op); }); e.append(rb);
+    nodes.push(e);
+  }
+  list.replaceChildren.apply(list, nodes);
+  $('convoBadge').hidden=!(P.settings.convo && NATIVE && C.topic);
+  if(typing||pendingError) scrollDown();
+}
+function renderHeader(){
+  var li=levelIdx(P.score);
+  $('lvCode').textContent=LEVELS[li].code; $('lvName').textContent=LEVELS[li].name||'';
+  $('lvBar').style.width=Math.round(levelProgress(P.score)*100)+'%';
+  var n=V.words.length; $('vocabCount').hidden=!n; $('vocabCount').textContent=n;
+  $('levelBtn').setAttribute('aria-label','Tu nivel: '+levelLabel(li)+'. Ver progreso');
+}
+function renderAll(){ renderHeader(); renderChat(); updateComposer(); }
+function scrollDown(instant){ var c=$('chat'); requestAnimationFrame(function(){ c.scrollTo({top:c.scrollHeight, behavior: instant?'auto':'smooth'}); }); }
+function updateComposer(){
+  var inp=$('input');
+  $('sendBtn').disabled = busy || !inp.value.trim();
+  $('micBtn').disabled = busy;
+  $('hintBtn').disabled = busy || !C.messages.some(function(m){ return m.role==='lena'; });
+}
+function autoGrow(){ var i=$('input'); i.style.height='auto'; i.style.height=Math.min(i.scrollHeight,128)+'px'; }
+function buildTopics(container){
+  container.replaceChildren();
+  Object.keys(TOPICS).forEach(function(id){
+    var T=TOPICS[id], b=h('button','topic'); b.type='button'; b.dataset.topic=id;
+    var bt=h('b',null,T.de); bt.lang='de'; b.append(bt, h('span',null,T.es));
+    b.addEventListener('click',function(){ startTopic(id); });
+    container.append(b);
+  });
+}
+function showSetup(){ closeSheets(); if(C.topic){ showSheet('sh-settings'); return; } $('setup').hidden=false; $('chat').scrollTop=0; $('setupKey').focus(); }
+
+/* ---------- Sheets ---------- */
+function showSheet(id){
+  closeSheets();
+  if(id==='sh-progress') renderProgress();
+  if(id==='sh-vocab') renderVocab();
+  if(id==='sh-settings') renderSettings();
+  $('scrim').hidden=false; var s=$(id); s.hidden=false; s.scrollTop=0;
+}
+function closeSheets(){ var any=!$('scrim').hidden; document.querySelectorAll('.sheet').forEach(function(s){ s.hidden=true; }); $('scrim').hidden=true; $('resetConfirm').hidden=true; return any; }
+window.__onBack = function(){
+  if(closeSheets()) return true;
+  if(!$('micTip').hidden){ $('micTip').hidden=true; return true; }
+  return false;
+};
+function renderProgress(){
+  var li=levelIdx(P.score), pr=levelProgress(P.score);
+  var now=$('nowText'); now.replaceChildren(document.createTextNode('Estás en '), h('b',null,levelLabel(li)));
+  if(li<LEVELS.length-1) now.append(document.createTextNode(' · '+Math.round(pr*100)+' % hacia '+levelLabel(li+1)));
+  var lad=$('ladder'); lad.replaceChildren();
+  LEVELS.forEach(function(L,k){ var r=h('div','rung'+(k===li?' cur':'')); var b=h('div','bar2'); var f=h('i'); f.style.width=(k<li?100:k===li?Math.round(pr*100):0)+'%'; b.append(f); r.append(b, h('small',null,L.key)); lad.append(r); });
+  var rec=P.recent||[]; var acc = rec.length ? Math.round(100*rec.filter(function(q){ return q>=2; }).length/rec.length)+' %' : '—';
+  var counts=[0,0,0]; V.words.forEach(function(w){ counts[wstatus(w)]++; });
+  var st=$('stats'); st.replaceChildren();
+  [[P.msgs||0,'mensajes en alemán'],[liveStreak(),'días seguidos practicando'],[acc,'frases bien (últimas 20)'],[counts[2],'palabras dominadas']].forEach(function(s){ var d=h('div','stat'); d.append(h('b',null,String(s[0])), h('span',null,s[1])); st.append(d); });
+  var k=$('kasten'); k.replaceChildren();
+  ['Nuevas','Practicando','Dominadas'].forEach(function(lbl,i){ var f=h('div','fach f'+i); f.append(h('b',null,String(counts[i])), h('span',null,lbl)); k.append(f); });
+}
+function renderVocab(){
+  var counts=[0,0,0]; V.words.forEach(function(w){ counts[wstatus(w)]++; });
+  var seg=$('vfilter'); seg.replaceChildren();
+  [['all','Todas',V.words.length],['0','Nuevas',counts[0]],['1','Practicando',counts[1]],['2','Dominadas',counts[2]]].forEach(function(o){
+    var b=h('button',null,o[1]+' ('+o[2]+')'); b.type='button'; b.setAttribute('aria-pressed', vfilter===o[0]?'true':'false');
+    b.addEventListener('click',function(){ vfilter=o[0]; renderVocab(); }); seg.append(b);
+  });
+  var list=$('wlist'); list.replaceChildren();
+  var ws=V.words.slice().reverse().filter(function(w){ return vfilter==='all' || String(wstatus(w))===vfilter; });
+  if(!ws.length){ list.append(h('li','empty', V.words.length ? 'No hay palabras en este grupo.' : 'Todavía no hay palabras. Lena te enseñará una nueva cada pocos mensajes, cuando estés listo.')); return; }
+  ws.forEach(function(w){
+    var s=wstatus(w), li=h('li','w'), main=h('div','w-main');
+    var d=h('span','w-de',w.de); d.lang='de'; main.append(d);
+    if(w.es) main.append(h('span','w-es',w.es));
+    if(w.ex){ var x=h('span','w-ex',w.ex); x.lang='de'; main.append(x); }
+    var side=h('div','w-side'); side.append(h('span','pill '+STATUS[s].cls,STATUS[s].label));
+    var pips=h('div','pips'); pips.setAttribute('aria-label','Usada bien '+Math.min(3,w.uses||0)+' de 3 veces'); for(var i=0;i<3;i++){ pips.append(h('i', i<(w.uses||0)?'on':null)); } side.append(pips);
+    side.append(miniSpeak(w.de+(w.ex?'. '+w.ex:''),'Escuchar '+w.de));
+    li.append(main, side); list.append(li);
+  });
+}
+function renderSettings(){
+  $('apiKey').value=getKey(); $('modelName').value=getModel(); $('apiStatus').textContent=''; $('apiStatus').className='status';
+  var st=ttsState();
+  var ar=$('autoRead'); ar.checked=!!P.settings.autoRead; ar.disabled=(st==='none');
+  var cv=$('convoMode'); cv.checked=!!P.settings.convo; $('convoOpt').hidden=!NATIVE;
+  var rr=$('rate-'+(P.settings.rate||'normal')); if(rr) rr.checked=true;
+  var pr=$('pace-'+(P.settings.pace||'muy_lento')); if(pr) pr.checked=true;
+  var note={ok:'La voz alemana está lista.', nolang:'Tu móvil no tiene instalada la voz alemana. Instálala para oír a Lena.', loading:'La voz se está preparando…', none:'Este navegador no puede leer en voz alta.', error:'El motor de voz del móvil no responde. Revisa en los ajustes de Android: Sistema → Idiomas → Salida de texto a voz.'}[st] || '';
+  $('voiceNote').textContent=note;
+  $('voiceInstall').hidden=!(NATIVE && (st==='nolang'||st==='error'));
+}
+async function saveAndTest(key, model, statusEl, btn){
+  key=String(key||'').trim();
+  if(!key){ statusEl.textContent='Pega tu clave de Gemini.'; statusEl.className='status bad'; return false; }
+  if(model!=null){ kvSet('lena.model', String(model).trim()||MODEL_DEFAULT); workingModel=null; }
+  btn.disabled=true; statusEl.textContent='Probando…'; statusEl.className='status';
+  try{
+    await testKey(key);
+    kvSet('lena.apiKey', key);
+    statusEl.textContent='¡Conectado! Lena está lista.'; statusEl.className='status ok';
+    pendingError=null; renderAll(); return true;
+  }catch(e){
+    if(e && e.code==='network'){ kvSet('lena.apiKey', key); statusEl.textContent='Guardada, pero no hay internet para probarla.'; statusEl.className='status bad'; renderAll(); return false; }
+    statusEl.textContent=errCopy(e).replace(' Revísala en Ajustes.','').replace(' Pulsa «Reintentar».',''); statusEl.className='status bad'; return false;
+  }finally{ btn.disabled=false; }
+}
+
+/* ---------- Events ---------- */
+buildTopics($('topics')); buildTopics($('topics2'));
+$('form').addEventListener('submit',function(e){ e.preventDefault(); send(); });
+$('input').addEventListener('input',function(){ autoGrow(); updateComposer(); });
+$('input').addEventListener('keydown',function(e){ if(e.key==='Enter' && !e.shiftKey && !e.isComposing && !NATIVE){ e.preventDefault(); send(); } });
+$('micBtn').addEventListener('click',function(){ if(listening) return; startListening(); });
+$('micTipClose').addEventListener('click',function(){ $('micTip').hidden=true; kvSet('lena.micTip','1'); });
+document.querySelectorAll('.phrase[data-p]').forEach(function(b){
+  b.addEventListener('click',function(){
+    var inp=$('input'), p=b.dataset.p, base=inp.value.trim();
+    inp.value = base ? base+' '+p : p; autoGrow(); updateComposer(); inp.focus();
+    var at=inp.value.lastIndexOf('…'); try{ if(at>=0) inp.setSelectionRange(at,at+1); else inp.setSelectionRange(inp.value.length,inp.value.length); }catch(e){}
+  });
+});
+$('hintBtn').addEventListener('click',getHint);
+$('levelBtn').addEventListener('click',function(){ showSheet('sh-progress'); });
+$('vocabBtn').addEventListener('click',function(){ showSheet('sh-vocab'); });
+$('setBtn').addEventListener('click',function(){ showSheet('sh-settings'); });
+$('changeTopic').addEventListener('click',function(){ showSheet('sh-topics'); });
+$('scrim').addEventListener('click',function(){ closeSheets(); });
+document.querySelectorAll('.sheet .close').forEach(function(b){ b.addEventListener('click',function(){ closeSheets(); }); });
+document.addEventListener('keydown',function(e){ if(e.key==='Escape') closeSheets(); });
+$('setupSave').addEventListener('click',function(){ saveAndTest($('setupKey').value, null, $('setupStatus'), $('setupSave')); });
+$('apiSave').addEventListener('click',function(){ saveAndTest($('apiKey').value, $('modelName').value, $('apiStatus'), $('apiSave')); });
+$('autoRead').addEventListener('change',function(e){ P.settings.autoRead=e.target.checked; save('profile'); });
+$('convoMode').addEventListener('change',function(e){ P.settings.convo=e.target.checked; if(P.settings.convo){ P.settings.autoRead=true; $('autoRead').checked=true; } save('profile'); renderChat(); });
+document.querySelectorAll('input[name="rate"]').forEach(function(r){ r.addEventListener('change',function(){ P.settings.rate=r.value; save('profile'); speak('So spreche ich jetzt.'); }); });
+document.querySelectorAll('input[name="pace"]').forEach(function(r){ r.addEventListener('change',function(){ P.settings.pace=r.value; save('profile'); }); });
+$('voiceInstall').addEventListener('click',function(){ try{ window.Android.openTtsInstall(); }catch(e){} });
+$('resetBtn').addEventListener('click',function(){ $('resetConfirm').hidden=false; });
+$('resetNo').addEventListener('click',function(){ $('resetConfirm').hidden=true; });
+$('resetYes').addEventListener('click',function(){
+  callSeq++; busy=false; typing=false; pendingError=null; stopSpeaking();
+  var d=DEFAULTS(); var keep=P.settings; P=d.profile; P.settings=keep; V=d.vocab; C=d.chat; openEs.clear();
+  closeSheets(); renderAll(); save('profile','vocab','chat'); toast('Progreso borrado. ¡Empezamos de nuevo!');
+});
+document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible' && !$('sh-settings').hidden) renderSettings(); });
+
+/* ---------- Start ---------- */
+if(NATIVE) $('micBtn').classList.add('native');
+loadAll();
+renderAll();
+scrollDown(true);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="paper">#F4F5FA</color>
+    <color name="paper_dark">#11131C</color>
+    <color name="sheet">#FFFFFF</color>
+    <color name="sheet_dark">#1A1E2B</color>
+    <color name="ic_bg">#2B3FB4</color>
+</resources>
