@@ -35,14 +35,14 @@ import java.util.concurrent.Executors;
  * Deutsch mit Lena: a WebView shell around assets/index.html.
  * The page talks to Android through the "Android" bridge below:
  *  - load/save: progress stored in SharedPreferences (only on this phone)
- *  - request: HTTPS POST to the Google Gemini API (only generativelanguage.googleapis.com is allowed)
+ *  - request: HTTPS GET/POST to the Anthropic (Claude) API (only api.anthropic.com is allowed)
  *  - speak/stopSpeaking/ttsStatus: German text-to-speech
  *  - listen: German speech recognition through the system voice dialog
  */
 public class MainActivity extends Activity {
 
     private static final int REQ_SPEECH = 4242;
-    private static final String API_HOST_PREFIX = "https://generativelanguage.googleapis.com/";
+    private static final String API_HOST_PREFIX = "https://api.anthropic.com/";
 
     private WebView web;
     private TextToSpeech tts;
@@ -164,7 +164,7 @@ public class MainActivity extends Activity {
         js("window.__speechError && window.__speechError('cancelled')");
     }
 
-    private void doRequest(String url, String headersJson, String body, String callbackId) {
+    private void doRequest(String method, String url, String headersJson, String body, String callbackId) {
         int code;
         String text;
         HttpURLConnection conn = null;
@@ -172,21 +172,24 @@ public class MainActivity extends Activity {
             if (url == null || !url.startsWith(API_HOST_PREFIX)) {
                 throw new IllegalArgumentException("URL not allowed");
             }
+            boolean isGet = "GET".equalsIgnoreCase(method);
             conn = (HttpURLConnection) new URL(url).openConnection();
-            conn.setRequestMethod("POST");
+            conn.setRequestMethod(isGet ? "GET" : "POST");
             conn.setConnectTimeout(20000);
             conn.setReadTimeout(120000);
-            conn.setDoOutput(true);
+            conn.setDoOutput(!isGet);
             JSONObject headers = new JSONObject(headersJson == null ? "{}" : headersJson);
             Iterator<String> keys = headers.keys();
             while (keys.hasNext()) {
                 String k = keys.next();
                 conn.setRequestProperty(k, headers.getString(k));
             }
-            byte[] bytes = (body == null ? "" : body).getBytes(StandardCharsets.UTF_8);
-            conn.setFixedLengthStreamingMode(bytes.length);
-            try (OutputStream os = conn.getOutputStream()) {
-                os.write(bytes);
+            if (!isGet) {
+                byte[] bytes = (body == null ? "" : body).getBytes(StandardCharsets.UTF_8);
+                conn.setFixedLengthStreamingMode(bytes.length);
+                try (OutputStream os = conn.getOutputStream()) {
+                    os.write(bytes);
+                }
             }
             code = conn.getResponseCode();
             InputStream is = code >= 400 ? conn.getErrorStream() : conn.getInputStream();
@@ -227,8 +230,8 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
-        public void request(String url, String headersJson, String body, String callbackId) {
-            pool.execute(() -> doRequest(url, headersJson, body, callbackId));
+        public void request(String method, String url, String headersJson, String body, String callbackId) {
+            pool.execute(() -> doRequest(method, url, headersJson, body, callbackId));
         }
 
         @JavascriptInterface

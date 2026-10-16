@@ -50,6 +50,6 @@ jobs:
         with:
           tag_name: v${{ github.run_number }}
           name: Deutsch mit Lena (versión ${{ github.run_number }})
-          body: Descarga DeutschMitLena.apk desde el móvil e instálalo. Necesitas una clave gratuita de Gemini (aistudio.google.com/apikey).
+          body: Descarga DeutschMitLena.apk desde el móvil e instálalo. Necesitas una clave de API de Claude (platform.claude.com).
           files: DeutschMitLena.apk
           make_latest: true
