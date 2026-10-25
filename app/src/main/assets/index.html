@@ -1203,7 +1203,9 @@ function normalizeSet(r){
     .map(function(e){ return {de:String(e.de).trim(), es:String(e.es||'').trim()}; });
   return {title:String(r.title_es||'').trim(), rule:String(r.explanation_es||'').trim(), examples:ex, items:items};
 }
-function exPrompt(q){
+var EX_THEMES=['home and family','work and school','food and shopping','travel and transport','friends and free time','health and the city'];
+function exPrompt(q, part){
+  part=part||{n:q.count, intro:true, k:0, of:1};
   var li=Math.max(0, Math.min(LEVELS.length-1, levelIdx(P.score)+(q.offset||0))), L=LEVELS[li];
   var diff = q.offset>0 ? "a little harder than the learner's usual level" : q.offset<0 ? "a little easier than the learner's usual level, with short, clear sentences" : "right at the learner's level";
   var known=V.words.map(function(w){ return w.de; }).slice(-30);
@@ -1218,7 +1220,8 @@ function exPrompt(q){
   if(q.avoid && q.avoid.length) o.push('Do not reuse these sentences from earlier rounds: '+q.avoid.slice(-20).map(function(s){ return '"'+s+'"'; }).join('; '));
   if(known.length) o.push('Where it fits, you may reuse words the learner is learning: '+known.join('; ')+'.');
   o.push('');
-  o.push('Write exactly '+q.count+' exercises on this topic. Mix the four types below, mostly "gap" and "choice", and use each type at least once:');
+  o.push('Write exactly '+part.n+' exercises on this topic. Mix the four types below, mostly "gap" and "choice", and use each type at least once:');
+  if(part.of>1) o.push('This is part '+(part.k+1)+' of '+part.of+' of a longer worksheet; the other parts are written separately. For variety, set most of your sentences in this area of life: '+EX_THEMES[part.k%EX_THEMES.length]+'.');
   o.push('- "gap": one German sentence with exactly one blank written as ___ (three underscores). The learner types the missing part (1 to 3 words). In "hint" give the base form in brackets, like "(gehen)" or "(der Tisch)", or "" if not needed.');
   o.push('- "choice": one German sentence with exactly one blank ___ and 3 options (or 4); exactly one option is correct.');
   o.push('- "order": a correct German sentence of 4 to 9 words; the app shuffles its words and the learner puts them back in order. Give its Spanish translation in "translation_es".');
@@ -1231,9 +1234,11 @@ function exPrompt(q){
   o.push('- If the topic is broad, choose the most useful part of it for this level. If the request is not about the German language, set "error_es" to a short, friendly message in Spanish and leave "exercises" empty.');
   o.push('');
   o.push('OUTPUT: only one JSON object with these keys:');
-  o.push('{"title_es": "short Spanish name of the topic, at most 6 words",');
-  o.push(' "explanation_es": "the rule in simple Spanish, 2 to 4 short sentences",');
-  o.push(' "examples": [2 or 3 objects like {"de": "German example", "es": "Spanish translation"}],');
+  if(part.intro){
+    o.push('{"title_es": "short Spanish name of the topic, at most 6 words",');
+    o.push(' "explanation_es": "the rule in simple Spanish, 2 to 4 short sentences",');
+    o.push(' "examples": [2 or 3 objects like {"de": "German example", "es": "Spanish translation"}],');
+  } else o.push('{');
   o.push(' "exercises": [objects, each of one of these shapes:');
   o.push('   {"type": "gap", "instruction_es": "...", "prompt_de": "... ___ ...", "hint": "(...)", "answers": ["..."], "full_de": "...", "explanation_es": "..."}');
   o.push('   {"type": "choice", "instruction_es": "...", "prompt_de": "... ___ ...", "options": ["...", "...", "..."], "answer": index of the correct option (0-based), "full_de": "...", "explanation_es": "..."}');
@@ -1252,6 +1257,21 @@ function setMode(m){
   renderChat();
   if(ex){ stopSpeaking(); renderEx(); } else { $('exBar').hidden=true; scrollDown(true); }
 }
+async function exBatch(req, part){
+  var last=null;
+  for(var a=0;a<3;a++){
+    try{
+      var r=await aiJSON(exPrompt(req, part), 3000);
+      var set=normalizeSet(r);
+      if(set.error && part.intro) return {set:set};
+      if(set.items.length>=Math.min(2,part.n)) return {set:set};
+      last={code:'invalid_json'};
+    }catch(e){ last=e||{code:'upstream'}; }
+    if(['auth','credits','forbidden','model','no_key','refused'].indexOf(last.code)>=0) break;
+    await new Promise(function(res){ setTimeout(res, 1200*(a+1)); });
+  }
+  return {err:last};
+}
 async function startExercises(q){
   if(!getKey()){ showSheet('sh-settings'); toast('Primero añade tu clave de Claude.'); return; }
   closeSheets(); stopSpeaking();
@@ -1261,7 +1281,21 @@ async function startExercises(q){
   exSave();
   if(mode!=='ex') setMode('ex'); else renderEx();
   var r=null, err=null, set=null;
-  try{ r=await aiJSON(exPrompt(req), 4096); set=normalizeSet(r); }catch(e){ err=e||{code:'upstream'}; }
+  try{
+    /* Several small calls in parallel (5 exercises each): faster and far less likely to be cut off than one big call. */
+    var BATCH=5, parts=Math.ceil(req.count/BATCH), jobs=[];
+    for(var k=0;k<parts;k++){
+      (function(k){
+        var n=Math.min(BATCH, req.count-k*BATCH);
+        jobs.push(exBatch(req, {n:n, intro:k===0, k:k, of:parts}));
+      })(k);
+    }
+    var results=await Promise.all(jobs);
+    if(results[0].err) throw results[0].err;
+    set=results[0].set; var seen={}, all=[];
+    results.forEach(function(x){ if(x.set) x.set.items.forEach(function(it){ var key=(it.full||it.prompt||'').toLowerCase(); if(seen[key]) return; seen[key]=1; all.push(it); }); });
+    set.items=all;
+  }catch(e){ err=e||{code:'upstream'}; }
   if(id!==exSeq) return;
   if(!err && set.error) err={code:'topic', message:set.error};
   else if(!err && set.items.length<2) err={code:'invalid_json'};
