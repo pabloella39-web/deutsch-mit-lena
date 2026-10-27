@@ -1260,13 +1260,19 @@ function normalizeSet(r){
     }
     if(type==='gap'){
       it.answers=strArr(x.answers); if(!it.answers.length) return;
+      if(/[()]/.test(it.prompt)) return; /* base forms or clues must go in "hint", never inside the sentence */
+      var fg=String(x.full_de||'').trim();
+      if(fg && !it.answers.some(function(a){ return cmpNorm(it.prompt.replace('___', a))===cmpNorm(fg); })) return; /* inconsistent: sentence + answer must equal full_de */
       if(!it.full) it.full=it.prompt.replace('___', it.answers[0]);
     }
     if(type==='choice'){
       var opts=strArr(x.options).slice(0,5); if(opts.length<2) return;
       var a=x.answer, ai=typeof a==='number'?a:(/^\d+$/.test(String(a))?Number(a):opts.indexOf(String(a||'').trim()));
       if(!(ai>=0 && ai<opts.length)) return;
-      var right=opts[ai]; it.options=shuffled(opts); it.answer=it.options.indexOf(right);
+      var right=opts[ai];
+      var fc=String(x.full_de||'').trim();
+      if(fc && it.prompt.indexOf('___')>=0 && cmpNorm(it.prompt.replace('___', right))!==cmpNorm(fc)) return;
+      it.options=shuffled(opts); it.answer=it.options.indexOf(right);
       if(!it.full) it.full=it.prompt.indexOf('___')>=0 ? it.prompt.replace('___', right) : right;
     }
     if(type==='order'){
@@ -1305,7 +1311,7 @@ function exPrompt(q, part){
   if(q.avoid && q.avoid.length) o.push('Do not reuse these sentences from earlier rounds: '+q.avoid.slice(-20).map(function(s){ return '"'+s+'"'; }).join('; '));
   if(known.length) o.push('Where it fits, you may reuse words the learner is learning: '+known.join('; ')+'.');
   o.push('');
-  o.push('Write exactly '+part.n+' exercises on this topic. Mix the four types below, mostly "gap" and "choice", and use each type at least once:');
+  o.push('Write exactly '+(part.n+1)+' exercises on this topic. Mix the four types below, mostly "gap" and "choice", and use each type at least once:');
   if(part.of>1) o.push('This is part '+(part.k+1)+' of '+part.of+' of a longer worksheet; the other parts are written separately. For variety, set most of your sentences in this area of life: '+EX_THEMES[part.k%EX_THEMES.length]+'.');
   o.push('- "gap": one German sentence with exactly one blank written as ___ (three underscores). The learner types the missing part (1 to 3 words). In "hint" give the base form in brackets, like "(gehen)" or "(der Tisch)", or "" if not needed.');
   o.push('- "choice": one German sentence with exactly one blank ___ and 3 options (or 4); exactly one option is correct.');
@@ -1313,6 +1319,7 @@ function exPrompt(q, part){
   o.push('- "transform": a German sentence in "prompt_de" and an instruction to change it (for example: put it in Perfekt, replace the noun with a pronoun, join it with weil). The learner writes the whole new sentence.');
   o.push('');
   o.push('RULES');
+  o.push('- For "gap" and "choice", the blank ___ stands for EXACTLY the words listed in "answers"/the correct option, and the rest of the sentence is written out in full. The sentence with the blank must contain NO brackets and NO base forms or clues (those go only in "hint"). Replacing ___ with the answer must give exactly "full_de". The learner must be able to tell from the sentence and the instruction alone what to type: if the topic is "zu", the blank is just "zu" (or the single word the topic is about), never a whole verb phrase.');
   o.push('- Every German sentence must be correct and natural, about everyday life (home, work, food, travel, friends, the weekend). Vary subjects, verbs and situations.');
   o.push('- Each exercise must have one clear solution. Put every acceptable answer in "answers" (for "order", also other correct word orders that use exactly the same words).');
   o.push('- "full_de" is the complete correct sentence. "explanation_es" explains in simple Spanish, in one short sentence (at most 20 words), why the answer is correct. "instruction_es" is a short instruction in Spanish.');
