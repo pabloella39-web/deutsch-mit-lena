@@ -1274,9 +1274,10 @@ function normalizeSet(r){
       if(!(ai>=0 && ai<opts.length)) return;
       var right=opts[ai];
       var fc=String(x.full_de||'').trim();
-      if(fc && it.prompt.indexOf('___')>=0 && cmpNorm(it.prompt.replace('___', right))!==cmpNorm(fc)) return;
+      var rr=/^[–—-]$/.test(right) ? '' : right;
+      if(fc && it.prompt.indexOf('___')>=0 && cmpNorm(it.prompt.replace('___', rr))!==cmpNorm(fc)) return;
       it.options=shuffled(opts); it.answer=it.options.indexOf(right);
-      if(!it.full) it.full=it.prompt.indexOf('___')>=0 ? it.prompt.replace('___', right) : right;
+      if(!it.full) it.full=it.prompt.indexOf('___')>=0 ? it.prompt.replace('___', rr) : right;
     }
     if(type==='order'){
       var ans=strArr(x.answers); if(!ans.length && it.full) ans=[it.full]; if(!ans.length) return;
@@ -1291,6 +1292,12 @@ function normalizeSet(r){
       it.prompt=String(x.prompt_de||'').trim(); it.answers=strArr(x.answers);
       if(!it.prompt || !it.answers.length) return; if(!it.full) it.full=it.answers[0];
     }
+    (function(){
+      var ans = type==='gap' ? it.answers : type==='choice' ? [it.options[it.answer]] : [];
+      var lo=' '+it.ins.toLowerCase().replace(/[«»"'`.,:;!?()]/g,' ')+' ';
+      var leak=ans.some(function(a){ return String(a||'').toLowerCase().replace(/[«»"'`.,:;!?()]/g,' ').split(/\s+/).some(function(t){ return t.length>=2 && t.length<=14 && lo.indexOf(' '+t+' ')>=0; }); });
+      if(leak) it.ins=EX_INS[type];
+    })();
     items.push(it);
   });
   var ex=(Array.isArray(r.examples)?r.examples:[]).filter(function(e){ return e && typeof e.de==='string' && e.de.trim(); }).slice(0,3)
@@ -1322,7 +1329,10 @@ function exPrompt(q, part){
   o.push('- "transform": a German sentence in "prompt_de" and an instruction to change it (for example: put it in Perfekt, replace the noun with a pronoun, join it with weil). The learner writes the whole new sentence.');
   o.push('');
   o.push('RULES');
-  o.push('- For "gap" and "choice", the blank ___ stands for EXACTLY the words listed in "answers"/the correct option, and the rest of the sentence is written out in full. The sentence with the blank must contain NO brackets and NO base forms or clues (those go only in "hint"). Replacing ___ with the answer must give exactly "full_de". The learner must be able to tell from the sentence and the instruction alone what to type: if the topic is "zu", the blank is just "zu" (or the single word the topic is about), never a whole verb phrase.');
+  o.push('- For "gap" and "choice", the sentence is written out in full except for the blank ___. Replacing ___ with the answer must give exactly "full_de". The sentence must contain NO brackets and NO clues; clues such as the base form go only in "hint".');
+  o.push('- Every exercise must make the learner DECIDE or PRODUCE something about the topic, never copy a word the instruction already gives. "instruction_es" must be generic ("Completa la frase.", "Elige la opción correcta.", "Escribe el verbo en la forma correcta.") and must NEVER contain, quote or name the answer or the specific word to write.');
+  o.push('- For "gap", the blank is the whole form the learner has to produce (1 to 3 words), for example the verb in the right form with everything it needs: "zu kommen", "aufzustehen", "dem", "gegangen". Never make the blank a single word that the topic name already is (for a topic about "zu", the answer is the whole infinitive form such as "zu kommen", not just "zu").');
+  o.push('- For topics about when to use something (like "zu" before an infinitive), mix cases where it is needed, cases where it must NOT be used (for example after modal verbs, or "gehen/lassen/können + infinitive") and special cases (separable verbs: "aufzustehen"; "um ... zu"). In "choice", one option can be "–" (nothing is needed): then the blank is replaced by nothing in "full_de".');
   o.push('- Every German sentence must be correct and natural, about everyday life (home, work, food, travel, friends, the weekend). Vary subjects, verbs and situations.');
   o.push('- Each exercise must have one clear solution. Put every acceptable answer in "answers" (for "order", also other correct word orders that use exactly the same words).');
   o.push('- "full_es" is a natural Spanish (Spain) translation of "full_de".');
