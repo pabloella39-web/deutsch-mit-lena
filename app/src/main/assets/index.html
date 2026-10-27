@@ -91,6 +91,7 @@ a{color:var(--blue-ink)}
 .fix .lab{font-family:var(--f-hand);color:var(--red);font-size:1.02rem;line-height:1.1}
 .fix .de{font-family:var(--f-de);font-size:1rem;overflow-wrap:anywhere}
 .fix mark{background:none;color:var(--red);font-weight:700;text-decoration:underline;text-decoration-style:wavy;text-decoration-color:var(--red);text-decoration-thickness:1px;text-underline-offset:4px}
+.fix .tr{font-size:.88rem;color:var(--muted);font-style:italic}
 .fix .note{font-size:.84rem;color:var(--muted)}
 .mini{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:50%;border:1px solid var(--red-line);background:var(--sheet);color:var(--red);cursor:pointer;flex:none}
 .mini.speaking{background:var(--red);color:var(--sheet)}
@@ -376,6 +377,7 @@ textarea.ans-input{resize:none}
 .verdict .vh{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .verdict .vt{font-family:var(--f-hand);font-size:1.2rem;line-height:1.1}
 .verdict.ok .vt{color:var(--ok)}.verdict.bad .vt{color:var(--red)}
+.verdict .tr{font-size:.9rem;color:var(--muted)}
 .verdict .full{font-family:var(--f-de);font-size:1.05rem;font-weight:600;overflow-wrap:anywhere}
 .yours{font-family:var(--f-de);color:var(--red);text-decoration:line-through;text-decoration-thickness:1px;overflow-wrap:anywhere}
 .why{font-size:.88rem;color:var(--muted)}
@@ -870,7 +872,7 @@ function buildPrompt(o){
   out.push('OUTPUT: reply with ONLY one JSON object, no other text, with exactly these keys:');
   out.push('{"reply": "your German message",');
   out.push(' "reply_es": "natural Spanish (Spain) translation of reply",');
-  out.push(' "correction": null or {"corrected": "corrected German version of the learner\'s last message", "note_es": "short explanation in Spanish"},');
+  out.push(' "correction": null or {"corrected": "corrected German version of the learner\'s last message", "corrected_es": "natural Spanish translation of the corrected German version", "note_es": "short explanation in Spanish"},');
   out.push(' "new_word": null or {"de": "the word, with article for nouns (der Ausflug) or infinitive for verbs (sich ausruhen)", "es": "Spanish meaning", "example": "a short German example sentence, different from your reply"},');
   out.push(' "used_words": ["practising words, written exactly as listed above, that the learner used correctly in their last message"],');
   out.push(' "quality": 0-3 for the learner\'s last message (0 = no German or only Spanish, 1 = understandable but many mistakes, 2 = small mistakes, 3 = correct) or null,');
@@ -943,7 +945,7 @@ function applyReply(r, opener, allowNew, focus){
     if(me){
       var cor=r.correction;
       if(cor && typeof cor.corrected==='string' && cor.corrected.trim() && normSent(cor.corrected)!==normSent(me.de)){
-        me.fix={de:cor.corrected.trim(), note:String(cor.note_es||'').trim(), es:q===0};
+        me.fix={de:cor.corrected.trim(), note:String(cor.note_es||'').trim(), es:q===0, tr:String(cor.corrected_es||'').trim()};
         if(!me.fix.es && me.fix.note) P.mistakes=(P.mistakes||[]).concat([{de:me.de, fix:me.fix.de, note:me.fix.note, t:Date.now()}]).slice(-30);
       }
       if(q!=null) me.q=q;
@@ -1054,6 +1056,7 @@ function renderMsg(m){
       if(m.fix.es) de.textContent=m.fix.de;
       else markDiff(m.de,m.fix.de).forEach(function(tk,k){ if(k) de.append(' '); if(tk.changed) de.append(h('mark',null,tk.t)); else de.append(tk.t); });
       fx.append(de);
+      if(m.fix.tr && !m.fix.es) fx.append(h('span','tr',m.fix.tr));
       if(m.fix.note) fx.append(h('span','note',m.fix.note));
       if(!m.fix.es && m.fix.note){ var pb=h('button','practice','Practicar este error'); pb.type='button'; pb.addEventListener('click',function(){ startExercises({topic:'El error de esta frase', mistakes:[{de:m.de, fix:m.fix.de, note:m.fix.note}]}); }); fx.append(pb); }
       li.append(fx);
@@ -1251,7 +1254,7 @@ function normalizeSet(r){
   raw.forEach(function(x){
     if(!x||typeof x!=='object') return;
     var type=String(x.type||'').toLowerCase(); if(!EX_TYPES[type]) return;
-    var it={type:type, ins:String(x.instruction_es||'').trim()||EX_INS[type], why:String(x.explanation_es||'').trim(), full:String(x.full_de||'').trim(), state:null, given:'', note:''};
+    var it={type:type, es:String(x.full_es||x.translation_es||'').trim(), ins:String(x.instruction_es||'').trim()||EX_INS[type], why:String(x.explanation_es||'').trim(), full:String(x.full_de||'').trim(), state:null, given:'', note:''};
     if(type==='gap'||type==='choice'){
       var p=String(x.prompt_de||'').replace(/_{2,}/g,'___').trim();
       var blanks=p.split('___').length-1;
@@ -1322,6 +1325,7 @@ function exPrompt(q, part){
   o.push('- For "gap" and "choice", the blank ___ stands for EXACTLY the words listed in "answers"/the correct option, and the rest of the sentence is written out in full. The sentence with the blank must contain NO brackets and NO base forms or clues (those go only in "hint"). Replacing ___ with the answer must give exactly "full_de". The learner must be able to tell from the sentence and the instruction alone what to type: if the topic is "zu", the blank is just "zu" (or the single word the topic is about), never a whole verb phrase.');
   o.push('- Every German sentence must be correct and natural, about everyday life (home, work, food, travel, friends, the weekend). Vary subjects, verbs and situations.');
   o.push('- Each exercise must have one clear solution. Put every acceptable answer in "answers" (for "order", also other correct word orders that use exactly the same words).');
+  o.push('- "full_es" is a natural Spanish (Spain) translation of "full_de".');
   o.push('- "full_de" is the complete correct sentence. "explanation_es" explains in simple Spanish, in one short sentence (at most 20 words), why the answer is correct. "instruction_es" is a short instruction in Spanish.');
   o.push('- If the topic is broad, choose the most useful part of it for this level. If the request is not about the German language, set "error_es" to a short, friendly message in Spanish and leave "exercises" empty.');
   o.push('');
@@ -1332,10 +1336,10 @@ function exPrompt(q, part){
     o.push(' "examples": [2 or 3 objects like {"de": "German example", "es": "Spanish translation"}],');
   } else o.push('{');
   o.push(' "exercises": [objects, each of one of these shapes:');
-  o.push('   {"type": "gap", "instruction_es": "...", "prompt_de": "... ___ ...", "hint": "(...)", "answers": ["..."], "full_de": "...", "explanation_es": "..."}');
-  o.push('   {"type": "choice", "instruction_es": "...", "prompt_de": "... ___ ...", "options": ["...", "...", "..."], "answer": index of the correct option (0-based), "full_de": "...", "explanation_es": "..."}');
-  o.push('   {"type": "order", "instruction_es": "...", "translation_es": "...", "answers": ["the sentence", "other correct orders"], "full_de": "...", "explanation_es": "..."}');
-  o.push('   {"type": "transform", "instruction_es": "...", "prompt_de": "...", "answers": ["..."], "full_de": "...", "explanation_es": "..."}],');
+  o.push('   {"type": "gap", "instruction_es": "...", "prompt_de": "... ___ ...", "hint": "(...)", "answers": ["..."], "full_de": "...", "full_es": "Spanish translation of full_de", "explanation_es": "..."}');
+  o.push('   {"type": "choice", "instruction_es": "...", "prompt_de": "... ___ ...", "options": ["...", "...", "..."], "answer": index of the correct option (0-based), "full_de": "...", "full_es": "Spanish translation of full_de", "explanation_es": "..."}');
+  o.push('   {"type": "order", "instruction_es": "...", "translation_es": "...", "answers": ["the sentence", "other correct orders"], "full_de": "...", "full_es": "Spanish translation of full_de", "explanation_es": "..."}');
+  o.push('   {"type": "transform", "instruction_es": "...", "prompt_de": "...", "answers": ["..."], "full_de": "...", "full_es": "Spanish translation of full_de", "explanation_es": "..."}],');
   o.push(' "error_es": null}');
   return o.join('\n');
 }
@@ -1584,6 +1588,7 @@ function verdictEl(it){
     var y=h('div','yours', it.type==='gap' ? it.prompt.replace('___', it.given) : it.given); y.lang='de'; v.append(y);
   }
   var f=h('div','full',shown); f.lang='de'; v.append(f);
+  if(it.es) v.append(h('div','tr',it.es));
   if(it.note) v.append(h('div','why strong',it.note));
   if(it.why) v.append(h('div','why',it.why));
   if(it.state==='bad' && !it.skipped && !it.appealed && it.type!=='choice' && String(it.given||'').trim()){
@@ -1727,6 +1732,7 @@ function renderDone(){
       var li=h('li','miss');
       if(q.given && !q.skipped){ var y=h('span','yours', q.type==='gap' ? q.prompt.replace('___', q.given) : q.type==='choice' ? q.prompt.replace('___', q.options[Number(q.given)]||'') : q.given); y.lang='de'; li.append(y); }
       var rr=h('div','right-row'); var r=h('span','right', q.full); r.lang='de'; rr.append(r, miniSpeak(q.full,'Escuchar')); li.append(rr);
+      if(q.es) li.append(h('span','why',q.es));
       if(q.why) li.append(h('span','why',q.why));
       ul.append(li);
     });
@@ -2163,14 +2169,14 @@ function tCheckPrompt(){
     '- "strengths_es": one warm sentence in Spanish about what they did well (a concrete thing). "tip_es": one short, useful Spanish tip for next time, or an empty string.',
     '- If the text is not German at all or is empty, set "error_es" to a short friendly Spanish message.',
     '',
-    'OUTPUT: only one JSON object: {"corrected": "...", "errors": [{"original": "...", "fixed": "...", "note_es": "..."}], "strengths_es": "...", "tip_es": "...", "error_es": null}'].join('\n');
+    'OUTPUT: only one JSON object: {"corrected": "...", "corrected_es": "natural Spanish (Spain) translation of the corrected text", "errors": [{"original": "...", "fixed": "...", "note_es": "..."}], "strengths_es": "...", "tip_es": "...", "error_es": null}'].join('\n');
 }
 function normalizeT(r){
   r=r||{};
   var e=wStr(r.error_es,300); if(e) return {error:e};
   var corrected=wStr(r.corrected,3000); if(!corrected) return null;
   var errors=(Array.isArray(r.errors)?r.errors:[]).map(function(x){ return {original:wStr(x&&x.original,200), fixed:wStr(x&&x.fixed,200), note:wStr(x&&x.note_es,300)}; }).filter(function(x){ return x.original && x.fixed && x.original!==x.fixed; }).slice(0,8);
-  return {corrected:corrected, errors:errors, strengths:wStr(r.strengths_es,300), tip:wStr(r.tip_es,300)};
+  return {corrected:corrected, es:wStr(r.corrected_es,3000), errors:errors, strengths:wStr(r.strengths_es,300), tip:wStr(r.tip_es,300)};
 }
 async function tCheck(){
   var words=dTok(T.text).length;
@@ -2209,7 +2215,7 @@ function renderTextW(w){
     var sc=h('div','score'); sc.append(h('b',null,nerr===0?'0':String(nerr)), h('span',null, nerr===0?'errores: ¡texto limpio!':nerr===1?'error importante':'errores importantes')); w.append(sc);
     if(R.strengths){ w.append(h('div','tpraise',R.strengths)); }
     var c1=h('div','task'); c1.append(h('div','dlab','Tu texto'), markOrig(T.text, R.errors)); w.append(c1);
-    var c2=h('div','task'); var hd=h('div','right-row'); hd.append(h('div','dlab','Texto corregido'), miniSpeak(R.corrected,'Escuchar el texto')); c2.append(hd, h('div','dline',R.corrected)); w.append(c2);
+    var c2=h('div','task'); var hd=h('div','right-row'); hd.append(h('div','dlab','Texto corregido'), miniSpeak(R.corrected,'Escuchar el texto')); c2.append(hd, h('div','dline',R.corrected)); if(R.es) c2.append(h('div','q-es',R.es)); w.append(c2);
     if(nerr){
       var c3=h('div','task'); c3.append(h('div','dlab','Qué cambiar y por qué'));
       R.errors.forEach(function(e){ var d=h('div','tfix'); var tt=h('div','tt'); tt.append(h('s',null,e.original), document.createTextNode(' → '), h('b',null,e.fixed)); d.append(tt); if(e.note) d.append(h('span','why',e.note)); c3.append(d); });
