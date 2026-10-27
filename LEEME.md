@@ -23,6 +23,10 @@ Lena es una tutora de alemán para tu móvil Android. Usa la API de Claude (Anth
 - Pregunta lo que quieras sobre alemán: «¿qué verbos van con *zu*?», «verbos con preposición fija», «diferencia entre *wissen* y *kennen*»… Cada respuesta trae traducción, un ejemplo y un botón para escucharlo.
 - Guarda tus últimas 15 consultas en el móvil.
 
+**Escribir** (pestaña «Escribir»)
+- **Dictado**: Lena lee 3 o 5 frases a tu nivel (también más despacio) y tú las escribes. Te marca palabra por palabra qué has acertado, avisa de mayúsculas y de ä, ö, ü, ß, y tiene una pista en español si te atascas.
+- **Texto corto**: eliges un tema, escribes 3 a 7 frases y Lena devuelve tu texto corregido, con cada error explicado en español. Los errores pasan a «Repasar mis errores» para practicarlos después. Tu borrador se guarda por si cierras la app.
+
 Tu nivel, tus palabras, la conversación y tus ejercicios se guardan solo en el móvil.
 
 ---
