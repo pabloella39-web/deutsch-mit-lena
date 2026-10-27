@@ -1203,8 +1203,9 @@ async function saveAndTest(key, model, statusEl, btn){
 /* ---------- Grammar exercises ---------- */
 var GRAMMAR_A2=['Perfekt: ¿haben o sein?','El dativo','El acusativo','Preposiciones con dativo','Wechselpräpositionen (in, an, auf…)','Verbos separables','Verbos modales','Oraciones con weil y dass','Comparativo y superlativo','Verbos reflexivos','El imperativo','Präteritum de sein, haben y modales'];
 var GRAMMAR_B1=['Declinación del adjetivo','Konjunktiv II (würde, hätte, wäre)','Oraciones de relativo','La voz pasiva','Infinitivo con zu','Conectores: obwohl, trotzdem, deshalb','Verbos con preposición','El genitivo','Präteritum de verbos irregulares','Oraciones con wenn y als'];
-var EX_TYPES={gap:1, choice:1, order:1, transform:1};
-var EX_INS={gap:'Completa el hueco.', choice:'Elige la opción correcta.', order:'Ordena las palabras.', transform:'Transforma la frase.'};
+var EX_TYPES={gap:1, choice:1, order:1, transform:1, translate:1};
+var exKind=(function(){ try{ return kvGet('lena.exKind')==='translate' ? 'translate' : ''; }catch(e){ return ''; } })();
+var EX_INS={gap:'Completa el hueco.', choice:'Elige la opción correcta.', order:'Ordena las palabras.', transform:'Transforma la frase.', translate:'Traduce la frase al alemán.'};
 var EX_PRAISE=['¡Correcto!','¡Muy bien!','¡Perfecto!','¡Eso es!'];
 var mode='chat';
 var EX={stage:'pick', count:10};
@@ -1288,6 +1289,11 @@ function normalizeSet(r){
       it.words=sh.map(function(i){ return ws[i]; }); it.built=[]; it.end=endPunct(ans[0]);
       it.tr=String(x.translation_es||'').trim(); if(!it.full) it.full=ans[0];
     }
+    if(type==='translate'){
+      it.prompt=String(x.prompt_es||'').trim(); it.answers=strArr(x.answers); it.hint=String(x.hint||'').trim();
+      if(!it.prompt || !it.answers.length || wordsOf(it.answers[0]).length>16) return;
+      if(!it.full) it.full=it.answers[0]; it.es=it.prompt;
+    }
     if(type==='transform'){
       it.prompt=String(x.prompt_de||'').trim(); it.answers=strArr(x.answers);
       if(!it.prompt || !it.answers.length) return; if(!it.full) it.full=it.answers[0];
@@ -1321,11 +1327,13 @@ function exPrompt(q, part){
   if(q.avoid && q.avoid.length) o.push('Do not reuse these sentences from earlier rounds: '+q.avoid.slice(-20).map(function(s){ return '"'+s+'"'; }).join('; '));
   if(known.length) o.push('Where it fits, you may reuse words the learner is learning: '+known.join('; ')+'.');
   o.push('');
-  o.push('Write exactly '+(part.n+1)+' exercises on this topic. Mix the four types below, mostly "gap" and "choice", and use each type at least once:');
+  if(q.only==='translate') o.push('Write exactly '+(part.n+1)+' exercises on this topic, ALL of the type "translate" described below.');
+  else o.push('Write exactly '+(part.n+1)+' exercises on this topic. Mix the types below, mostly "gap" and "choice", use "order" and "transform" at least once, and include one "translate" for every 4 or 5 exercises.');
   if(part.of>1) o.push('This is part '+(part.k+1)+' of '+part.of+' of a longer worksheet; the other parts are written separately. For variety, set most of your sentences in this area of life: '+EX_THEMES[part.k%EX_THEMES.length]+'.');
   o.push('- "gap": one German sentence with exactly one blank written as ___ (three underscores). The learner types the missing part (1 to 3 words). In "hint" give the base form in brackets, like "(gehen)" or "(der Tisch)", or "" if not needed.');
   o.push('- "choice": one German sentence with exactly one blank ___ and 3 options (or 4); exactly one option is correct.');
   o.push('- "order": a correct German sentence of 4 to 9 words; the app shuffles its words and the learner puts them back in order. Give its Spanish translation in "translation_es".');
+  o.push('- "translate": a natural Spanish sentence of 5 to 12 words in "prompt_es" that the learner must translate into German, written so the correct German needs the topic\'s grammar. In "answers" give the main German translation first and then 1 or 2 other equally correct, natural translations (other word order, synonyms). Do not give the German answer away. In "hint" give at most 3 German words or base forms the learner may not know (for example "(das Geschenk, schenken)"), or "" if none.');
   o.push('- "transform": a German sentence in "prompt_de" and an instruction to change it (for example: put it in Perfekt, replace the noun with a pronoun, join it with weil). The learner writes the whole new sentence.');
   o.push('');
   o.push('RULES');
@@ -1349,6 +1357,7 @@ function exPrompt(q, part){
   o.push('   {"type": "gap", "instruction_es": "...", "prompt_de": "... ___ ...", "hint": "(...)", "answers": ["..."], "full_de": "...", "full_es": "Spanish translation of full_de", "explanation_es": "..."}');
   o.push('   {"type": "choice", "instruction_es": "...", "prompt_de": "... ___ ...", "options": ["...", "...", "..."], "answer": index of the correct option (0-based), "full_de": "...", "full_es": "Spanish translation of full_de", "explanation_es": "..."}');
   o.push('   {"type": "order", "instruction_es": "...", "translation_es": "...", "answers": ["the sentence", "other correct orders"], "full_de": "...", "full_es": "Spanish translation of full_de", "explanation_es": "..."}');
+  o.push('   {"type": "translate", "instruction_es": "Traduce la frase al alemán.", "prompt_es": "Spanish sentence", "hint": "(...)", "answers": ["main German translation", "other correct translation"], "full_de": "main German translation", "full_es": "the Spanish sentence", "explanation_es": "..."}');
   o.push('   {"type": "transform", "instruction_es": "...", "prompt_de": "...", "answers": ["..."], "full_de": "...", "full_es": "Spanish translation of full_de", "explanation_es": "..."}],');
   o.push(' "error_es": null}');
   return o.join('\n');
@@ -1384,7 +1393,7 @@ async function exBatch(req, part){
 async function startExercises(q){
   if(!getKey()){ showSheet('sh-settings'); toast('Primero añade tu clave de Claude.'); return; }
   closeSheets(); stopSpeaking();
-  var req={topic:String(q.topic||'').trim()||'Gramática', offset:Math.max(-2,Math.min(2,q.offset||0)), mistakes:q.mistakes||null, avoid:q.avoid||[], count:EX.count||10};
+  var req={topic:String(q.topic||'').trim()||'Gramática', offset:Math.max(-2,Math.min(2,q.offset||0)), mistakes:q.mistakes||null, avoid:q.avoid||[], count:EX.count||10, only:q.only!==undefined ? q.only : exKind};
   var id=++exSeq;
   EX={stage:'loading', count:req.count, req:req};
   exSave();
@@ -1430,7 +1439,7 @@ function exCheck(skip){
   } else if(it.type==='gap'){
     j=judge(it.given, it.answers, {});
     it.state=j.ok?'ok':'bad'; it.note=j.note||''; it.shown = j.ok ? it.prompt.replace('___', cmpNorm(j.match)) : it.full;
-  } else if(it.type==='transform'){
+  } else if(it.type==='transform'||it.type==='translate'){
     j=judge(it.given, it.answers, {sentence:true});
     it.state=j.ok?'ok':'bad'; it.note=j.note||''; it.shown = j.ok ? j.match : it.full;
   } else return;
@@ -1446,7 +1455,7 @@ function exNext(){
   if(EX.idx>=EX.items.length) return exFinish();
   exSave(); renderRun(); $('exView').scrollTop=0;
   var it=EX.items[EX.idx];
-  if(it.type==='gap'||it.type==='transform') setTimeout(function(){ var a=$('exAns'); if(a) a.focus(); }, 60);
+  if(it.type==='gap'||it.type==='transform'||it.type==='translate') setTimeout(function(){ var a=$('exAns'); if(a) a.focus(); }, 60);
 }
 function exFinish(){
   var ok=EX.items.filter(function(q){ return q.state==='ok'; }).length, n=EX.items.length;
@@ -1460,6 +1469,7 @@ async function exAppeal(it){
   var expected = it.type==='gap' ? it.answers[0] : it.full;
   var task = it.type==='gap' ? 'Sentence with the blank: '+it.prompt+(it.hint?' '+it.hint:'')
            : it.type==='order' ? 'Words to put in order: '+it.words.join(' / ')
+           : it.type==='translate' ? 'Spanish sentence to translate into German: '+it.prompt
            : 'Original sentence: '+it.prompt;
   var given = it.type==='gap' ? '"'+it.given+'" (full sentence: "'+it.prompt.replace('___', it.given)+'")' : '"'+it.given+'"';
   var prompt=['A Spanish speaker learning German did this grammar exercise.',
@@ -1504,6 +1514,10 @@ function renderPick(){
   var go=h('button','btn primary','Crear'); go.type='submit'; go.disabled=!inp.value.trim();
   inp.addEventListener('input',function(){ EX.draft=inp.value; go.disabled=!inp.value.trim(); });
   row.append(inp, go);
+  var kd=h('div','count'); kd.append(h('span',null,'Tipo'));
+  var ksg=h('div','seg');
+  [['','Variados'],['translate','Traducir al alemán']].forEach(function(o){ var b=h('button',null,o[1]); b.type='button'; b.setAttribute('aria-pressed',String(exKind===o[0])); b.addEventListener('click',function(){ exKind=o[0]; kvSet('lena.exKind', exKind); ksg.querySelectorAll('button').forEach(function(x){ x.setAttribute('aria-pressed',String(x===b)); }); }); ksg.append(b); });
+  kd.append(ksg);
   var cnt=h('div','count'); cnt.append(h('span',null,'Número de ejercicios'));
   var seg=h('div','seg');
   [5,10,15].forEach(function(n){
@@ -1512,7 +1526,7 @@ function renderPick(){
     seg.append(b);
   });
   cnt.append(seg);
-  f.append(lab, row, cnt);
+  f.append(lab, row, kd, cnt);
   f.addEventListener('submit',function(e){ e.preventDefault(); var t=inp.value.trim(); if(t) startExercises({topic:t}); });
   w.append(f);
 
@@ -1598,7 +1612,7 @@ function verdictEl(it){
     var y=h('div','yours', it.type==='gap' ? it.prompt.replace('___', it.given) : it.given); y.lang='de'; v.append(y);
   }
   var f=h('div','full',shown); f.lang='de'; v.append(f);
-  if(it.es) v.append(h('div','tr',it.es));
+  if(it.es && it.type!=='translate') v.append(h('div','tr',it.es));
   if(it.note) v.append(h('div','why strong',it.note));
   if(it.why) v.append(h('div','why',it.why));
   if(it.state==='bad' && !it.skipped && !it.appealed && it.type!=='choice' && String(it.given||'').trim()){
@@ -1677,12 +1691,13 @@ function renderRun(){
       });
       card.append(pool);
     }
-  } else if(it.type==='transform'){
-    var src=h('div','src',it.prompt); src.lang='de'; card.append(src);
+  } else if(it.type==='transform'||it.type==='translate'){
+    var src=h('div','src',it.prompt); src.lang=it.type==='translate'?'es':'de'; card.append(src);
+    if(it.type==='translate' && it.hint) card.append(h('div','hint-de',it.hint));
     if(!it.state){
       var ta=h('textarea','ans-input'); ta.id='exAns'; ta.rows=2; ta.lang='de'; ta.spellcheck=false;
       ta.setAttribute('autocapitalize','sentences'); ta.setAttribute('autocorrect','off');
-      ta.placeholder='Escribe la frase completa'; ta.value=it.given||'';
+      ta.placeholder= it.type==='translate' ? 'Escríbela en alemán' : 'Escribe la frase completa'; ta.value=it.given||'';
       var sync2=function(){ it.given=ta.value; renderExBar(); };
       ta.addEventListener('input',sync2);
       card.append(ta, umlautKeys(ta, sync2));

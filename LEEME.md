@@ -12,7 +12,7 @@ Lena es una tutora de alemán para tu móvil Android. Usa la API de Claude (Anth
 **Ejercicios de gramática** (pestaña «Ejercicios»)
 - Escribe el tema que quieras («el dativo», «Perfekt con sein», «verbos separables»…) o elige uno de los sugeridos para tu nivel.
 - Lena prepara 5, 10 o 15 ejercicios (en lotes pequeños en paralelo, con reintentos automáticos) con la regla explicada en español y ejemplos que puedes escuchar.
-- Cuatro tipos: rellenar el hueco, elegir la opción correcta, ordenar palabras y transformar frases.
+- Cinco tipos: rellenar el hueco, elegir la opción correcta, ordenar palabras, transformar frases y **traducir una frase del español al alemán** (puedes pedir una tanda solo de traducciones con el selector «Tipo»).
 - Corrección al momento con explicación. Si crees que tu respuesta también vale, pulsa «Creo que mi respuesta también vale» y Lena la revisa.
 - Al terminar: tu puntuación, tus fallos y la opción de hacer otra ronda. Si aciertas casi todo, la siguiente es un poco más difícil; si fallas mucho, un poco más fácil.
 - **Repasar tus errores**: Lena guarda los errores que te corrige en el chat. Puedes practicarlos con «Repasar mis errores recientes» o con «Practicar este error» en cada corrección.
