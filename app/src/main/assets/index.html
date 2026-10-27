@@ -717,7 +717,14 @@ async function claudeText(prompt, opts, keyOverride){
   opts=opts||{};
   var model=getModel();
   for(var attempt=0; attempt<2; attempt++){
-    var res=await rawReq('POST','messages',{model:model, max_tokens:opts.maxTokens||1200, system:opts.system||SYSTEM, messages:[{role:'user', content:prompt}]}, key);
+    var body={model:model, max_tokens:opts.maxTokens||1200, system:opts.system||SYSTEM, messages:[{role:'user', content:prompt}]};
+    /* Claude 5.x models think by default and thinking tokens eat into max_tokens (slow + truncated JSON). Ask for the least thinking. */
+    if(kvGet('lena.noFast')!=='1'){ body.output_config={effort:'low'}; if(/haiku/i.test(model)) body.thinking={type:'disabled'}; }
+    var res=await rawReq('POST','messages',body, key);
+    if(res.status===400 && body.output_config && /thinking|effort|output_config/i.test(res.text)){
+      kvSet('lena.noFast','1'); delete body.output_config; delete body.thinking;
+      res=await rawReq('POST','messages',body, key);
+    }
     if(res.status===200){
       var data=null; try{ data=JSON.parse(res.text); }catch(e){ throw {code:'invalid_json'}; }
       var txt=(data&&Array.isArray(data.content)?data.content:[]).filter(function(b){ return b&&b.type==='text'; }).map(function(b){ return b.text; }).join('');
@@ -739,9 +746,25 @@ function parseLoose(t){
   var a=t.indexOf('{'), b=t.lastIndexOf('}'); if(a>=0&&b>a){ try{ return JSON.parse(t.slice(a,b+1)); }catch(e){} }
   return null;
 }
+/* If the answer was cut off, keep every item that was completed before the cut. */
+function repairJSON(t){
+  var a=t.indexOf('{'); if(a<0) return null;
+  var stack=[], inStr=false, esc=false, best=-1, bestStack=null;
+  for(var i=a;i<t.length;i++){
+    var c=t[i];
+    if(inStr){ if(esc) esc=false; else if(c==='\\') esc=true; else if(c==='"') inStr=false; continue; }
+    if(c==='"'){ inStr=true; continue; }
+    if(c==='{'||c==='[') stack.push(c);
+    else if(c==='}'||c===']'){ stack.pop(); if(stack.length>=1 && stack.length<=2){ best=i+1; bestStack=stack.slice(); } }
+  }
+  if(best<0) return null;
+  var out=t.slice(a,best); for(var k=bestStack.length-1;k>=0;k--) out+=bestStack[k]==='{'?'}':']';
+  try{ return JSON.parse(out); }catch(e){ return null; }
+}
 async function aiJSON(prompt, maxTokens){
   var r=await claudeText(prompt, {maxTokens:maxTokens||1200});
   var j=parseLoose(r.text);
+  if(!j && r.stop==='max_tokens') j=repairJSON(r.text);
   if(Array.isArray(j) && j[0] && typeof j[0]==='object') j=j[0];
   if(!j||typeof j!=='object'||Array.isArray(j)) throw {code: r.stop==='max_tokens' ? 'too_long' : 'invalid_json'};
   return j;
