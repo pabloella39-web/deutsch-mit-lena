@@ -18,6 +18,11 @@ Lena es una tutora de alemán para tu móvil Android. Usa la API de Claude (Anth
 - **Repasar tus errores**: Lena guarda los errores que te corrige en el chat. Puedes practicarlos con «Repasar mis errores recientes» o con «Practicar este error» en cada corrección.
 - También puedes pedirlos en el chat: *«Kannst du mir Übungen zum Dativ geben?»* o *«hazme ejercicios de verbos modales»*.
 
+**Consultas** (pestaña «Consultas»)
+- Traduce frases del alemán al español y del español al alemán, con alternativas formales o informales cuando cambian el significado.
+- Pregunta lo que quieras sobre alemán: «¿qué verbos van con *zu*?», «verbos con preposición fija», «diferencia entre *wissen* y *kennen*»… Cada respuesta trae traducción, un ejemplo y un botón para escucharlo.
+- Guarda tus últimas 15 consultas en el móvil.
+
 Tu nivel, tus palabras, la conversación y tus ejercicios se guardan solo en el móvil.
 
 ---

@@ -233,9 +233,35 @@ a{color:var(--blue-ink)}
 .note{font-size:.82rem;color:var(--muted);margin:0}
 
 .toast{position:fixed;left:50%;transform:translateX(-50%);top:66px;z-index:30;width:max-content;max-width:min(calc(100vw - 32px),440px);background:var(--ink);color:var(--paper);padding:10px 14px;border-radius:12px;font-size:.9rem;box-shadow:var(--shadow);text-align:center}
+
+/* Consultas */
+.qform{display:flex;flex-direction:column;gap:10px;background:var(--sheet);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:var(--shadow)}
+.qform label{font-weight:700;font-size:.92rem}
+.qform textarea{width:100%;min-width:0;border:1px solid var(--line);border-radius:12px;padding:11px 13px;font-size:16px;line-height:1.4;background:var(--paper);color:var(--ink);resize:none;font-family:inherit}
+.qform textarea:focus{border-color:var(--blue-ink);outline:none}
+.qform .btn{align-self:flex-end;padding:11px 18px;font-size:.95rem}
+.qcard{background:var(--sheet);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:14px 16px 16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.q-ask{font-size:.8rem;color:var(--muted);overflow-wrap:anywhere}
+.qcard h3{margin:0;font-family:var(--f-de);font-size:1.2rem;line-height:1.25;overflow-wrap:anywhere}
+.qcard .intro{margin:0;font-size:.93rem}
+.q-group{font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--blue-ink);margin-top:6px}
+.q-items{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.q-item{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line)}
+.q-item:first-child{border-top:0}
+.q-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.q-de{font-family:var(--f-de);font-weight:600;font-size:1.05rem;overflow-wrap:anywhere}
+.q-es{font-size:.9rem;color:var(--muted);overflow-wrap:anywhere}
+.q-ex{font-family:var(--f-de);font-size:.95rem;font-style:italic;margin-top:3px;overflow-wrap:anywhere}
+.q-ex small{display:block;font-family:inherit;font-style:normal;font-size:.82rem;color:var(--muted)}
+.q-note{font-size:.84rem;color:var(--ink);background:var(--paper);border-radius:8px;padding:6px 9px;margin-top:4px}
+.q-item .mini{border-color:var(--line);color:var(--blue-ink)}
+.q-item .mini.speaking{background:var(--blue);color:var(--on-blue)}
+.q-tips{margin:0;padding-left:1.1em;font-size:.88rem;color:var(--muted)}
+.q-clear{align-self:center}
+
 /* Mode tabs: conversation | grammar exercises */
-.tabs{flex:none;display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:6px 16px 8px;background:var(--sheet);border-bottom:1px solid var(--line)}
-.tabs button{display:flex;align-items:center;justify-content:center;gap:7px;padding:8px 10px;border-radius:10px;border:1px solid transparent;background:none;font-weight:700;font-size:.9rem;color:var(--muted);cursor:pointer}
+.tabs{flex:none;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:6px 12px 8px;background:var(--sheet);border-bottom:1px solid var(--line)}
+.tabs button{display:flex;align-items:center;justify-content:center;gap:5px;padding:8px 4px;border-radius:10px;border:1px solid transparent;background:none;font-weight:700;font-size:.82rem;white-space:nowrap;min-width:0;color:var(--muted);cursor:pointer}
 .tabs button svg{flex:none}
 .tabs button[aria-selected="true"]{background:var(--blue-soft);color:var(--blue-ink)}
 
@@ -367,6 +393,7 @@ textarea.ans-input{resize:none}
   <nav class="tabs" role="tablist" aria-label="Qué quieres hacer">
     <button type="button" role="tab" id="tab-chat" aria-selected="true" aria-controls="chat"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/></svg>Conversación</button>
     <button type="button" role="tab" id="tab-ex" aria-selected="false" aria-controls="exView"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Ejercicios</button>
+    <button type="button" role="tab" id="tab-q" aria-selected="false" aria-controls="qView"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>Consultas</button>
   </nav>
 
   <div class="topicbar" id="topicbar" hidden>
@@ -443,6 +470,7 @@ textarea.ans-input{resize:none}
 
   <main class="exview" id="exView" hidden></main>
   <footer class="exbar" id="exBar" hidden></footer>
+  <main class="exview" id="qView" hidden></main>
 </div>
 
 <div class="scrim" id="scrim" hidden></div>
@@ -831,7 +859,7 @@ function errCopy(e){
     case 'rate_limited': return 'Demasiadas peticiones seguidas. Espera un momento y pulsa «Reintentar».';
     case 'refused': return 'Claude no ha querido responder a esto. Prueba a escribirlo de otra forma.';
     case 'overloaded': return 'Claude está saturado ahora mismo. Pulsa «Reintentar» en unos segundos.';
-    case 'too_long': return 'La respuesta era demasiado larga. Pulsa «Reintentar» o pide menos ejercicios.';
+    case 'too_long': return 'La respuesta era demasiado larga. Pulsa «Reintentar» o pide menos cosas a la vez.';
     case 'network': return 'No hay conexión a internet. Compruébala y pulsa «Reintentar».';
     case 'invalid_json': return 'Lena se ha liado con la respuesta. Pulsa «Reintentar».';
     default: return 'No se ha podido hablar con Lena'+(e&&e.message?' ('+e.message+')':'')+'. Pulsa «Reintentar».';
@@ -992,7 +1020,7 @@ function renderChat(){
   $('welcome').hidden=!!C.topic;
   $('setup').hidden=hasKey;
   document.querySelectorAll('#topics .topic').forEach(function(b){ b.disabled=!hasKey; });
-  $('topicbar').hidden=!C.topic || mode==='ex';
+  $('topicbar').hidden=!C.topic || mode!=='chat';
   $('phrases').hidden=!C.topic;
   if(C.topic) $('topicName').textContent=(TOPICS[C.topic]||TOPICS.frei).de;
   var list=$('msgs');
@@ -1048,6 +1076,7 @@ window.__onBack = function(){
   if(closeSheets()) return true;
   if(!$('micTip').hidden){ $('micTip').hidden=true; return true; }
   if(mode==='ex'){ if(EX.stage==='run' && EX.confirmQuit){ EX.confirmQuit=false; renderRun(); return true; } setMode('chat'); return true; }
+  if(mode==='q'){ setMode('chat'); return true; }
   return false;
 };
 function renderProgress(){
@@ -1105,7 +1134,7 @@ async function saveAndTest(key, model, statusEl, btn){
     await testKey(key);
     kvSet('lena.claudeKey', key);
     statusEl.textContent='¡Conectado! Lena está lista.'; statusEl.className='status ok';
-    pendingError=null; renderAll(); if(mode==='ex') renderEx(); return true;
+    pendingError=null; renderAll(); if(mode==='ex') renderEx(); if(mode==='q') renderQ(); return true;
   }catch(e){
     if(e && e.code==='network'){ kvSet('lena.claudeKey', key); statusEl.textContent='Guardada, pero no hay internet para probarla.'; statusEl.className='status bad'; renderAll(); return false; }
     statusEl.textContent=errCopy(e).replace(' Revísala en Ajustes.','').replace(' Pulsa «Reintentar».',''); statusEl.className='status bad'; return false;
@@ -1250,12 +1279,12 @@ function exPrompt(q, part){
 
 /* ---------- Exercises: flow ---------- */
 function setMode(m){
-  mode = m==='ex' ? 'ex' : 'chat'; kvSet('lena.mode', mode);
-  var ex = mode==='ex';
-  $('tab-chat').setAttribute('aria-selected', String(!ex)); $('tab-ex').setAttribute('aria-selected', String(ex));
-  $('chat').hidden=ex; $('composer').hidden=ex; $('exView').hidden=!ex;
+  mode = (m==='ex'||m==='q') ? m : 'chat'; kvSet('lena.mode', mode);
+  var ex = mode==='ex', q = mode==='q', ch = mode==='chat';
+  $('tab-chat').setAttribute('aria-selected', String(ch)); $('tab-ex').setAttribute('aria-selected', String(ex)); $('tab-q').setAttribute('aria-selected', String(q));
+  $('chat').hidden=!ch; $('composer').hidden=!ch; $('exView').hidden=!ex; $('qView').hidden=!q;
   renderChat();
-  if(ex){ stopSpeaking(); renderEx(); } else { $('exBar').hidden=true; scrollDown(true); }
+  if(ex){ stopSpeaking(); renderEx(); } else if(q){ stopSpeaking(); $('exBar').hidden=true; renderQ(); } else { $('exBar').hidden=true; scrollDown(true); }
 }
 async function exBatch(req, part){
   var last=null;
@@ -1644,6 +1673,7 @@ function renderDone(){
 buildTopics($('topics')); buildTopics($('topics2'));
 $('tab-chat').addEventListener('click',function(){ setMode('chat'); });
 $('tab-ex').addEventListener('click',function(){ setMode('ex'); });
+$('tab-q').addEventListener('click',function(){ setMode('q'); });
 $('form').addEventListener('submit',function(e){ e.preventDefault(); send(); });
 $('input').addEventListener('input',function(){ autoGrow(); updateComposer(); });
 $('input').addEventListener('keydown',function(e){ if(e.key==='Enter' && !e.shiftKey && !e.isComposing && !NATIVE){ e.preventDefault(); send(); } });
@@ -1677,16 +1707,163 @@ $('resetYes').addEventListener('click',function(){
   callSeq++; busy=false; typing=false; pendingError=null; stopSpeaking();
   var d=DEFAULTS(); var keep=P.settings; P=d.profile; P.settings=keep; V=d.vocab; C=d.chat; openEs.clear();
   exSeq++; EX={stage:'pick', count:EX.count||10}; exSave();
-  closeSheets(); renderAll(); if(mode==='ex') renderEx(); save('profile','vocab','chat'); toast('Progreso borrado. ¡Empezamos de nuevo!');
+  qSeq++; Q={list:[], pending:null, err:null, draft:''}; qSave();
+  closeSheets(); renderAll(); if(mode==='ex') renderEx(); if(mode==='q') renderQ(); save('profile','vocab','chat'); toast('Progreso borrado. ¡Empezamos de nuevo!');
 });
 document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible' && !$('sh-settings').hidden) renderSettings(); });
+
+
+/* ---------- Consultas: translate and ask ---------- */
+var Q={list:[], pending:null, err:null, draft:''};
+var qSeq=0;
+var Q_CHIPS=[
+  {t:'Traducir al alemán', fill:'Traduce al alemán: '},
+  {t:'Traducir al español', fill:'Traduce al español: '},
+  {t:'Verbos con «zu»', ask:'¿Qué verbos van con «zu» + infinitivo y cuáles con la preposición «zu» (con dativo)? Con traducción y un ejemplo de cada uno.'},
+  {t:'Verbos con preposición fija', ask:'Dame los verbos alemanes con preposición fija más útiles para mi nivel, con el caso que rigen, su traducción y un ejemplo.'},
+  {t:'Verbos separables', ask:'Dame los verbos separables más útiles para mi nivel, con su traducción y un ejemplo.'},
+  {t:'wissen o kennen', ask:'¿Cuál es la diferencia entre «wissen» y «kennen»? Con ejemplos.'}
+];
+function qLoad(){ var a=readJSON('lena.q'); Q.list=Array.isArray(a)?a.filter(function(x){ return x && x.q && x.res && Array.isArray(x.res.items); }).slice(0,15):[]; }
+function qSave(){ kvSet('lena.q', Q.list.length ? JSON.stringify(Q.list.slice(0,15)) : ''); }
+function qStr(v,max){ return typeof v==='string' ? v.trim().slice(0,max||400) : ''; }
+function normalizeQ(r){
+  r=r||{};
+  var err=qStr(r.error_es,300);
+  var items=(Array.isArray(r.items)?r.items:[]).slice(0,15).map(function(x){
+    if(!x||typeof x!=='object') return null;
+    var it={g:qStr(x.group_es,80), de:qStr(x.de,300), es:qStr(x.es,300), exde:qStr(x.example_de,300), exes:qStr(x.example_es,300), note:qStr(x.note_es,300)};
+    return (it.de||it.es) ? it : null;
+  }).filter(Boolean);
+  var tips=(Array.isArray(r.tips_es)?r.tips_es:[]).map(function(t){ return qStr(t,300); }).filter(Boolean).slice(0,3);
+  if(err && !items.length) return {error:err};
+  return {title:qStr(r.title_es,100), intro:qStr(r.intro_es,900), items:items, tips:tips};
+}
+function qPrompt(question){
+  var L=LEVELS[levelIdx(P.score)];
+  return [
+    'You are the reference engine of a German-learning app for a native Spanish speaker from Spain. The learner is at level '+L.key+'. They ask you something about German; answer it accurately and clearly.',
+    'Learner request (JSON string): '+JSON.stringify(question),
+    '',
+    'WHAT TO DO',
+    '- Translation request (German to Spanish or Spanish to German; detect the direction from the text): give the most natural translation as the first item, with "de" = the German sentence and "es" = the Spanish sentence, whatever the direction. If the learner gave a German sentence, "de" is theirs (corrected if it has a mistake, and say so in "note_es"). Add at most 2 more items for other natural options only when the register (formal "Sie" or informal "du") or the meaning really differs, and explain the difference in "note_es". If the text is long, translate it sentence by sentence, one item per sentence (at most 12 items).',
+    '- List request (for example verbs that go with "zu", verbs with a fixed preposition, separable verbs, false friends): give the 8 to 12 most useful entries for the learner\'s level (up to 15 if they ask for more). For each: "de" = the entry (for verbs, the verb with its pattern, like "versuchen + zu + Infinitiv" or "warten auf + Akk."), "es" = its Spanish meaning, "example_de" = one short everyday example sentence, "example_es" = its Spanish translation. If the request covers more than one meaning (for example "zu" before an infinitive and "zu" as a fixed preposition with the dative), cover each one and set "group_es" on every item to a short Spanish group title.',
+    '- Question about a word, a difference between words or a grammar point: explain it in simple Spanish in "intro_es" (at most 5 short sentences) and add 2 to 6 items with examples.',
+    '- Always: all German must be correct and natural. "note_es" is optional, simple Spanish, at most 25 words. "tips_es" is an optional list of at most 3 short Spanish tips (a pitfall, a rule of thumb). Keep everything compact.',
+    '- If the request is not about the German language, set "error_es" to a short friendly Spanish message and leave "items" empty.',
+    '',
+    'OUTPUT: only one JSON object:',
+    '{"title_es": "short title in Spanish, at most 8 words",',
+    ' "intro_es": "short Spanish text, or empty string",',
+    ' "items": [{"group_es": "optional group title or empty string", "de": "...", "es": "...", "example_de": "optional", "example_es": "optional", "note_es": "optional"}],',
+    ' "tips_es": [],',
+    ' "error_es": null}'
+  ].join('\n');
+}
+async function qAsk(question){
+  question=String(question||'').trim().slice(0,600); if(!question) return;
+  if(!getKey()){ showSheet('sh-settings'); toast('Primero añade tu clave de Claude.'); return; }
+  var id=++qSeq; Q.pending=question; Q.err=null; Q.draft=''; renderQ();
+  var res=null, err=null;
+  for(var a=0;a<3 && !res;a++){
+    try{
+      var n=normalizeQ(await aiJSON(qPrompt(question), 3000));
+      if(n.error){ err={code:'topic', message:n.error}; break; }
+      if(!n.items.length && !n.intro) throw {code:'invalid_json'};
+      res=n; err=null;
+    }catch(e){
+      err=e||{code:'upstream'};
+      if(['auth','credits','forbidden','model','no_key','refused'].indexOf(err.code)>=0) break;
+      await new Promise(function(r){ setTimeout(r, 1200*(a+1)); });
+      if(id!==qSeq) return;
+    }
+  }
+  if(id!==qSeq) return;
+  Q.pending=null;
+  if(res){ Q.list.unshift({q:question, t:Date.now(), res:res}); Q.list=Q.list.slice(0,15); qSave(); Q.err=null; Q.draft=''; }
+  else { Q.err={q:question, err:err}; Q.draft=question; }
+  renderQ();
+}
+function qCard(e){
+  var c=h('article','qcard');
+  c.append(h('div','q-ask','Tú: '+e.q+' · '+fmtDate(e.t)));
+  if(e.res.title) c.append(h('h3',null,e.res.title));
+  if(e.res.intro) c.append(h('p','intro',e.res.intro));
+  if(e.res.items.length){
+    var ul=h('ul','q-items'), lastG=null;
+    e.res.items.forEach(function(it){
+      if(it.g && it.g!==lastG){ var gl=h('li','q-group',it.g); ul.append(gl); }
+      lastG=it.g||lastG;
+      var li=h('li','q-item'), m=h('div','q-main');
+      if(it.de) m.append(h('div','q-de',it.de));
+      if(it.es) m.append(h('div','q-es',it.es));
+      if(it.exde){ var ex=h('div','q-ex',it.exde); if(it.exes) ex.append(h('small',null,it.exes)); m.append(ex); }
+      if(it.note) m.append(h('div','q-note',it.note));
+      li.append(m);
+      var say=it.exde||it.de; if(say) li.append(miniSpeak(say,'Escuchar en alemán'));
+      ul.append(li);
+    });
+    c.append(ul);
+  }
+  if(e.res.tips.length){ var tl=h('ul','q-tips'); e.res.tips.forEach(function(t){ tl.append(h('li',null,t)); }); c.append(tl); }
+  return c;
+}
+function renderQ(){
+  if(mode!=='q') return;
+  var v=$('qView'), w=h('div','exwrap');
+  var hd=h('div'); hd.append(h('h2','ex-h2','Consultas'), h('p','ex-lead','Pregunta lo que quieras: traducciones en los dos sentidos, verbos con preposición, diferencias entre palabras…')); w.append(hd);
+  if(!getKey()){
+    var s=h('div','err'); s.append(h('p',null,'Para hacer consultas, primero añade tu clave de Claude.'));
+    var kb=h('button','btn primary','Añadir clave'); kb.type='button'; kb.addEventListener('click',function(){ showSheet('sh-settings'); }); s.append(kb); w.append(s);
+  }
+  var f=h('form','qform'); f.setAttribute('autocomplete','off');
+  var lab=h('label',null,'¿Qué quieres saber?'); lab.htmlFor='qInput';
+  var ta=h('textarea'); ta.id='qInput'; ta.rows=3; ta.maxLength=600; ta.placeholder='Ej.: Traduce al alemán: ¿Puedes ayudarme mañana?'; ta.value=Q.draft||'';
+  var go=h('button','btn primary','Preguntar'); go.type='submit'; go.disabled=!ta.value.trim() || !!Q.pending;
+  ta.addEventListener('input',function(){ Q.draft=ta.value; go.disabled=!ta.value.trim() || !!Q.pending; });
+  f.append(lab, ta, go);
+  f.addEventListener('submit',function(e){ e.preventDefault(); if(Q.pending) return; var t=ta.value.trim(); if(t) qAsk(t); });
+  w.append(f);
+  var c2=h('div','chips');
+  Q_CHIPS.forEach(function(c){
+    var b=h('button','chip',c.t); b.type='button'; b.disabled=!!Q.pending;
+    b.addEventListener('click',function(){
+      if(c.ask) return qAsk(c.ask);
+      Q.draft=c.fill; ta.value=c.fill; go.disabled=false; ta.focus(); try{ ta.setSelectionRange(ta.value.length, ta.value.length); }catch(e){}
+    });
+    c2.append(b);
+  });
+  w.append(c2);
+  if(Q.pending){
+    var box=h('div','loadbox'); var dots=h('div','bubble typing'); dots.append(h('i'),h('i'),h('i'));
+    box.append(dots, h('p','ex-lead','Lena está buscando la respuesta a «'+Q.pending+'»…')); w.append(box);
+  }
+  if(Q.err){
+    var er=h('div','err'); er.append(h('p',null, Q.err.err && Q.err.err.code==='topic' ? Q.err.err.message : errCopy(Q.err.err)));
+    if(needsSettings(Q.err.err)){ var sb=h('button','btn primary','Abrir ajustes'); sb.type='button'; sb.addEventListener('click',function(){ showSheet('sh-settings'); }); er.append(sb); }
+    else if(!(Q.err.err && Q.err.err.code==='topic')){ var rb=h('button','btn primary','Reintentar'); rb.type='button'; rb.addEventListener('click',function(){ qAsk(Q.err.q); }); er.append(rb); }
+    w.append(er);
+  }
+  Q.list.forEach(function(e){ w.append(qCard(e)); });
+  if(Q.list.length){
+    var cl=h('button','btn q-clear','Borrar consultas'); cl.type='button';
+    cl.addEventListener('click',function(){
+      if(cl.dataset.sure){ Q.list=[]; qSave(); renderQ(); return; }
+      cl.dataset.sure='1'; cl.textContent='Pulsa otra vez para borrar'; setTimeout(function(){ if(cl.isConnected){ delete cl.dataset.sure; cl.textContent='Borrar consultas'; } }, 3500);
+    });
+    w.append(cl);
+  }
+  var keep=v.scrollTop;
+  v.replaceChildren(w); v.scrollTop=keep;
+}
 
 /* ---------- Start ---------- */
 if(NATIVE) $('micBtn').classList.add('native');
 loadAll();
 exLoad();
+qLoad();
 renderAll();
-setMode(kvGet('lena.mode')==='ex' ? 'ex' : 'chat');
+setMode(kvGet('lena.mode')==='ex' ? 'ex' : kvGet('lena.mode')==='q' ? 'q' : 'chat');
 })();
 </script>
 </body>
