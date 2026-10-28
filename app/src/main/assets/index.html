@@ -1320,6 +1320,7 @@ function exPrompt(q, part){
   o.push('You write German grammar exercises for a native Spanish speaker from Spain who is learning German in a phone app.');
   o.push('Difficulty: level '+L.key+' ('+diff+'). At this level the learner handles: '+L.desc);
   o.push('Topic the learner asked for, in their own words: "'+String(q.topic||'').slice(0,200)+'"');
+  o.push('The learner may also say HOW they want to practise inside that text (for example "translate sentences from Spanish to German", "only gaps", "with zu and other particles"). Follow it: it overrides the default mix of types. The text can name several grammar points or cases at once; cover all of them, spread across the exercises, and make each exercise need one of them.');
   if(q.mistakes && q.mistakes.length){
     o.push('Base the exercises on the grammar behind these real mistakes the learner made. Practise the same grammar points with NEW sentences (do not copy these):');
     q.mistakes.slice(-8).forEach(function(m){ o.push('- wrote "'+m.de+'", correct: "'+m.fix+'"'+(m.note?' ('+m.note+')':'')); });
@@ -1345,7 +1346,7 @@ function exPrompt(q, part){
   o.push('- Each exercise must have one clear solution. Put every acceptable answer in "answers" (for "order", also other correct word orders that use exactly the same words).');
   o.push('- "full_es" is a natural Spanish (Spain) translation of "full_de".');
   o.push('- "full_de" is the complete correct sentence. "explanation_es" explains in simple Spanish, in one short sentence (at most 20 words), why the answer is correct. "instruction_es" is a short instruction in Spanish.');
-  o.push('- If the topic is broad, choose the most useful part of it for this level. If the request is not about the German language, set "error_es" to a short, friendly message in Spanish and leave "exercises" empty.');
+  o.push('- If the topic is broad, choose the most useful part of it for this level. Requests about translating, about the kind of exercise, or about any point of German grammar or vocabulary are ALWAYS valid. Only if the text has nothing to do with learning German at all (for example a cooking recipe), set "error_es" to a short, friendly message in Spanish and leave "exercises" empty.');
   o.push('');
   o.push('OUTPUT: only one JSON object with these keys:');
   if(part.intro){
@@ -1394,6 +1395,7 @@ async function startExercises(q){
   if(!getKey()){ showSheet('sh-settings'); toast('Primero añade tu clave de Claude.'); return; }
   closeSheets(); stopSpeaking();
   var req={topic:String(q.topic||'').trim()||'Gramática', offset:Math.max(-2,Math.min(2,q.offset||0)), mistakes:q.mistakes||null, avoid:q.avoid||[], count:EX.count||10, only:q.only!==undefined ? q.only : exKind};
+  if(!req.only && /traduc|übersetz|translat/i.test(req.topic)) req.only='translate'; /* "traducir frases con zu…" asks for translation exercises */
   var id=++exSeq;
   EX={stage:'loading', count:req.count, req:req};
   exSave();
