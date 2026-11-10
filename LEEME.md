@@ -75,4 +75,4 @@ Puedes ver tu gasto en platform.claude.com → Usage, y poner un límite mensual
 - Con Android Studio: **Open** → esta carpeta → **Build → Build APK(s)**.
 
 ## Sección "De clase" (v13)
-En **Ejercicios** hay un bloque «De clase» con 14 temas de tus apuntes: preposiciones con acusativo y dativo, verbos con preposición, wo(r)-/da(r)-, zu-Infinitiv, um…zu/damit, estado civil, carta de amor y vocabulario (alemán→español y español→alemán). Pulsa un tema y Lena genera ejercicios nuevos cada vez.
+En **Ejercicios** hay un bloque «De clase» con 16 temas de tus apuntes: preposiciones con acusativo, dativo y genitivo, verbos con preposición, wo(r)-/da(r)-, zu-Infinitiv, um…zu/damit, estado civil, carta de amor y vocabulario (alemán→español y español→alemán). Pulsa un tema y Lena genera ejercicios nuevos cada vez.
