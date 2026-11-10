@@ -1,6 +1,7 @@
 package com.lenadeutsch.app;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -30,6 +31,8 @@ import java.util.Iterator;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Deutsch mit Lena: a WebView shell around assets/index.html.
@@ -75,7 +78,17 @@ public class MainActivity extends Activity {
                 openExternal(uri);
                 return true;
             }
+
+            /* Android 6 (API 23) only calls this older overload. */
+            @SuppressWarnings("deprecation")
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                if (url != null && url.startsWith("file:")) return false;
+                if (url != null) openExternal(Uri.parse(url));
+                return true;
+            }
         });
+        checkWebViewVersion(s.getUserAgentString());
 
         initTts();
 
@@ -84,6 +97,31 @@ public class MainActivity extends Activity {
         } else {
             web.loadUrl("file:///android_asset/index.html");
         }
+    }
+
+    /** Old tablets ship an outdated WebView; the app needs Chrome/WebView 84 or newer. */
+    private void checkWebViewVersion(String ua) {
+        int v = 0;
+        try {
+            Matcher m = Pattern.compile("Chrome/(\\d+)").matcher(ua == null ? "" : ua);
+            if (m.find()) v = Integer.parseInt(m.group(1));
+        } catch (Exception ignored) { }
+        if (v == 0 || v >= 84) return;
+        try {
+            new AlertDialog.Builder(this)
+                .setTitle("Actualiza el WebView")
+                .setMessage("Este dispositivo tiene un WebView antiguo (versión " + v + ") y la app puede verse mal o no funcionar. "
+                    + "Abre Google Play, busca «Android System WebView» (y «Chrome») y pulsa Actualizar.")
+                .setPositiveButton("Abrir Play Store", (d, w) -> {
+                    try {
+                        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=com.google.android.webview")));
+                    } catch (Exception e) {
+                        openExternal(Uri.parse("https://play.google.com/store/apps/details?id=com.google.android.webview"));
+                    }
+                })
+                .setNegativeButton("Continuar", null)
+                .show();
+        } catch (Exception ignored) { }
     }
 
     private void initTts() {
