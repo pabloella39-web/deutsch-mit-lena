@@ -73,3 +73,6 @@ Puedes ver tu gasto en platform.claude.com → Usage, y poner un límite mensual
 - `app/src/main/java/com/lenadeutsch/app/MainActivity.java`: puente con Android (voz, micrófono, guardado y conexión segura)
 - `.github/workflows/apk.yml`: fabricación automática del APK en GitHub
 - Con Android Studio: **Open** → esta carpeta → **Build → Build APK(s)**.
+
+## Sección "De clase" (v13)
+En **Ejercicios** hay un bloque «De clase» con 14 temas de tus apuntes: preposiciones con acusativo y dativo, verbos con preposición, wo(r)-/da(r)-, zu-Infinitiv, um…zu/damit, estado civil, carta de amor y vocabulario (alemán→español y español→alemán). Pulsa un tema y Lena genera ejercicios nuevos cada vez.
