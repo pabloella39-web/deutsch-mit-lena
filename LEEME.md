@@ -76,3 +76,10 @@ Puedes ver tu gasto en platform.claude.com → Usage, y poner un límite mensual
 
 ## Sección "De clase" (v13)
 En **Ejercicios** hay un bloque «De clase» con 16 temas de tus apuntes: preposiciones con acusativo, dativo y genitivo, verbos con preposición, wo(r)-/da(r)-, zu-Infinitiv, um…zu/damit, estado civil, carta de amor y vocabulario (alemán→español y español→alemán). Pulsa un tema y Lena genera ejercicios nuevos cada vez.
+
+## Pestaña «Hoy» (v18)
+- **Repaso de palabras**: tarjetas con repaso espaciado (las que fallas vuelven mañana, las que sabes cada vez más tarde). Los sustantivos se colorean por género: der azul, die rojo, das verde. Con frases de ejemplo y audio.
+- **Palabras de clase**: botón para añadir a tu repaso las 149 palabras y verbos de tus apuntes (máximo 8 nuevas al día).
+- **Sesión diaria**: repaso de palabras + 6 ejercicios que mezclan tus temas de clase y traducciones.
+- **Error que se repite**: si cometes 3 veces el mismo tipo de error, aparece un botón para practicar solo eso.
+- **Aviso diario**: notificación a la hora que elijas (19:00 por defecto). No avisa si ya has practicado ese día. En Android 13 o superior la app pide permiso para notificaciones.

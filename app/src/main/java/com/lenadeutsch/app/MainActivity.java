@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.speech.RecognizerIntent;
 import android.speech.tts.TextToSpeech;
@@ -52,11 +53,14 @@ public class MainActivity extends Activity {
     private volatile String ttsStatus = "loading";
     private SharedPreferences prefs;
     private final ExecutorService pool = Executors.newCachedThreadPool();
+    private volatile String launchTarget = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         prefs = getSharedPreferences("lena", MODE_PRIVATE);
+        readLaunch(getIntent());
+        ReminderReceiver.schedule(this);
 
         web = new WebView(this);
         web.setBackgroundColor(Color.TRANSPARENT);
@@ -122,6 +126,19 @@ public class MainActivity extends Activity {
                 .setNegativeButton("Continuar", null)
                 .show();
         } catch (Exception ignored) { }
+    }
+
+    private void readLaunch(Intent i) {
+        String o = i == null ? null : i.getStringExtra("open");
+        if (o != null) launchTarget = o;
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        readLaunch(intent);
+        js("window.__launch && window.__launch()");
     }
 
     private void initTts() {
@@ -270,6 +287,36 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void request(String method, String url, String headersJson, String body, String callbackId) {
             pool.execute(() -> doRequest(method, url, headersJson, body, callbackId));
+        }
+
+        /** "" if the reminder was never configured, otherwise "on|hour|minute". */
+        @JavascriptInterface
+        public String getReminder() {
+            if (!prefs.contains("rem_on")) return "";
+            return (prefs.getBoolean("rem_on", false) ? "1" : "0") + "|" + prefs.getInt("rem_h", 19) + "|" + prefs.getInt("rem_m", 0);
+        }
+
+        @JavascriptInterface
+        public void setReminder(boolean on, int hour, int minute) {
+            prefs.edit().putBoolean("rem_on", on).putInt("rem_h", Math.max(0, Math.min(23, hour))).putInt("rem_m", Math.max(0, Math.min(59, minute))).apply();
+            ReminderReceiver.schedule(MainActivity.this);
+            if (on && Build.VERSION.SDK_INT >= 33) {
+                runOnUiThread(() -> {
+                    try {
+                        if (checkSelfPermission("android.permission.POST_NOTIFICATIONS") != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                            requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 99);
+                        }
+                    } catch (Exception ignored) { }
+                });
+            }
+        }
+
+        /** Returns "hoy" once when the app was opened from the reminder. */
+        @JavascriptInterface
+        public String takeLaunch() {
+            String t = launchTarget;
+            launchTarget = "";
+            return t;
         }
 
         @JavascriptInterface
