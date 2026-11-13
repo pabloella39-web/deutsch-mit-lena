@@ -895,6 +895,7 @@ function buildPrompt(o){
   out.push('- Check the learner\'s last message. If it has mistakes (verb form, word order, article or gender, case, preposition, wrong word, important spelling), put the full corrected version in "correction.corrected" and explain the single most important mistake in simple Spanish in "correction.note_es" (at most 20 words). Do not correct punctuation or a missing capital letter on its own. If the message is correct, "correction" is null. Never invent mistakes.');
   out.push('- If the learner writes in Spanish or mixes in Spanish words, put how to say it in German in "correction.corrected", and in "correction.note_es" encourage them in Spanish to try it in German. Then reply in simple German.');
   out.push('- If the learner asks what something means or how to say something, answer briefly inside your German reply and continue the conversation.');
+  out.push('- Only correct REAL mistakes. If the learner\'s message is already correct, natural German (even if you would word it differently), set "correction" to null and do not change it. The corrected version must differ from the learner\'s text only where there is a real mistake, keep their meaning and their words where possible, and must itself be perfect German: check it once more before answering.');
   out.push('- Never more than one correction and one new word per turn. Be encouraging.');
   out.push('- If the learner asks for grammar exercises or practice on a topic, say briefly in German that you have prepared some exercises (the app shows a button to open them) and put the topic in "exercise_topic".');
   out.push('');
@@ -1299,14 +1300,6 @@ function normalizeSet(r){
       if(fg && !it.answers.some(function(a){ return cmpNorm(it.prompt.replace('___', a))===cmpNorm(fg); })) return; /* inconsistent: sentence + answer must equal full_de */
       if(!it.full) it.full=it.prompt.replace('___', it.answers[0]);
     }
-    if((type==='gap'||type==='translate'||type==='choice') && it.hint){
-      /* a hint must never give the answer away (e.g. "(daran)" for the blank "daran") */
-      var hn=function(t){ return cmpNorm(String(t||'').replace(/[()\[\]]/g,' ')); };
-      var hw=hn(it.hint), ans0=type==='choice' ? [] : it.answers;
-      var hs=hw.split(/[\s,;\/]+/).filter(Boolean);
-      var leakH=ans0.some(function(a){ var an=hn(a); return an && (hw===an || hs.indexOf(an)>=0 || hw.indexOf(an)>=0 && an.length>=4); });
-      if(leakH) it.hint='';
-    }
     if(type==='choice'){
       var opts=strArr(x.options).slice(0,5); if(opts.length<2) return;
       var a=x.answer, ai=typeof a==='number'?a:(/^\d+$/.test(String(a))?Number(a):opts.indexOf(String(a||'').trim()));
@@ -1335,6 +1328,18 @@ function normalizeSet(r){
     if(type==='transform'){
       it.prompt=String(x.prompt_de||'').trim(); it.answers=strArr(x.answers);
       if(!it.prompt || !it.answers.length) return; if(!it.full) it.full=it.answers[0];
+    }
+    if(it.hint && (type==='gap'||type==='translate')){
+      /* a hint must never give the answer away (e.g. "(daran)" for the blank "daran", or the whole translation) */
+      var hn=function(t){ return cmpNorm(String(t||'').replace(/[()\[\]]/g,' ')).toLowerCase(); };
+      var hw=hn(it.hint), hs=hw.split(/[\s,;\/+]+/).filter(Boolean);
+      var leakH=it.answers.some(function(a){
+        var an=hn(a); if(!an) return false;
+        if(type==='gap') return hw===an || hs.indexOf(an)>=0 || (hw.indexOf(an)>=0 && an.length>=4);
+        var aw=an.split(/\s+/).filter(Boolean), common=aw.filter(function(w){ return hs.indexOf(w)>=0; }).length;
+        return hs.length>4 || common>=Math.ceil(aw.length*0.6);
+      });
+      if(leakH) it.hint='';
     }
     (function(){
       var ans = type==='gap' ? it.answers : type==='choice' ? [it.options[it.answer]] : [];
@@ -1404,6 +1409,7 @@ function exPrompt(q, part){
   o.push('- For "gap", the blank is the whole form the learner has to produce (1 to 3 words), for example the verb in the right form with everything it needs: "zu kommen", "aufzustehen", "dem", "gegangen". Never make the blank a single word that the topic name already is (for a topic about "zu", the answer is the whole infinitive form such as "zu kommen", not just "zu").');
   o.push('- For topics about when to use something (like "zu" before an infinitive), mix cases where it is needed, cases where it must NOT be used (for example after modal verbs, or "gehen/lassen/können + infinitive") and special cases (separable verbs: "aufzustehen"; "um ... zu"). In "choice", one option can be "–" (nothing is needed): then the blank is replaced by nothing in "full_de".');
   o.push('- Every German sentence must be correct and natural, about everyday life (home, work, food, travel, friends, the weekend). Vary subjects, verbs and situations.');
+  o.push('- Order the exercises from easy to hard: the first third must be easy ones where the rule is easy to spot; sentences of at most 10 words; use only common A1-A2 vocabulary (except words named in the class material or topic); no trick questions and nothing the learner could not know from the rule you explain.');
   o.push('- Each exercise must have one clear solution. Put every acceptable answer in "answers" (for "order", also other correct word orders that use exactly the same words).');
   o.push('- "full_es" is a natural Spanish (Spain) translation of "full_de".');
   o.push('- "full_de" is the complete correct sentence. "explanation_es" explains in simple Spanish, in one short sentence (at most 20 words), why the answer is correct. "instruction_es" is a short instruction in Spanish.');
@@ -1452,6 +1458,24 @@ async function exBatch(req, part){
   }
   return {err:last};
 }
+function exLine(it,i){
+  var t=it.type;
+  if(t==='gap') return i+'. [gap] '+it.prompt+'  | accepted answers: '+it.answers.join(' / ');
+  if(t==='choice') return i+'. [choice] '+it.prompt+'  | options: '+it.options.join(' / ')+' | marked correct: '+it.options[it.answer];
+  if(t==='order') return i+'. [order] correct sentence: '+it.answers[0];
+  if(t==='translate') return i+'. [translate] Spanish: '+it.prompt+'  | accepted German: '+it.answers.join(' / ');
+  return i+'. [transform] '+it.prompt+' | accepted: '+it.answers.join(' / ');
+}
+/* Second, independent check by a strict teacher: drops exercises whose answer is wrong or ambiguous. If the check fails for any reason, nothing is dropped. */
+async function exVerify(items){
+  try{
+    var list=items.map(function(it,i){ return exLine(it,i+1); }).join('\n');
+    var j=await aiJSON('You are a strict German teacher checking exercises written for learners. For each numbered item decide if it is FAULTY. An item is faulty if: the German is ungrammatical or unnatural; a marked or accepted answer is wrong; another answer that is NOT in the accepted list would also be fully correct (ambiguous gap or choice); two options of a choice are both correct; or the hint or sentence already contains the answer. Be strict about real mistakes, but do not flag style preferences.\nItems:\n'+list+'\nReturn ONLY this JSON: {"faulty":[numbers of faulty items, empty if none]}', 500);
+    var bad=(Array.isArray(j.faulty)?j.faulty:[]).map(Number).filter(function(n){ return n>=1&&n<=items.length; });
+    var keep=items.filter(function(_,i){ return bad.indexOf(i+1)<0; });
+    return keep.length>=3 ? keep : items;
+  }catch(e){ return items; }
+}
 async function startExercises(q){
   if(!getKey()){ showSheet('sh-settings'); toast('Primero añade tu clave de Claude.'); return; }
   closeSheets(); stopSpeaking();
@@ -1479,6 +1503,10 @@ async function startExercises(q){
     if(results[0].err) throw results[0].err;
     set=results[0].set; var seen={}, all=[];
     results.forEach(function(x){ if(x.set) x.set.items.forEach(function(it){ var key=(it.full||it.prompt||'').toLowerCase(); if(seen[key]) return; seen[key]=1; all.push(it); }); });
+    /* examples at the top must not be the same sentences the learner is asked to write */
+    var fulls={}; all.forEach(function(it){ if(it.full) fulls[cmpNorm(it.full).toLowerCase()]=1; });
+    set.examples=(set.examples||[]).filter(function(e){ return !fulls[cmpNorm(e.de).toLowerCase()]; });
+    if(all.length>=4 && id===exSeq) all=await exVerify(all);
     set.items=all;
   }catch(e){ err=e||{code:'upstream'}; }
   if(id!==exSeq) return;
@@ -1529,7 +1557,11 @@ function exFinish(){
   EX.stage='done'; EX.ok=ok;
   if(EX.topic===DAILY_TOPIC){ P.daily=P.daily||{}; P.daily.ex=dayStr(); }
   logAct('ex',n); logAct('ok',ok);
-  var pp=pathByTitle(EX.topic); if(pp && n>0 && ok/n>=0.7 && !pathState().done[pp.id]){ pathState().done[pp.id]=true; setTimeout(function(){ toast('¡Tema dominado: '+pp.t+'!'); },400); }
+  var pp=pathByTitle(EX.topic);
+  if(pp && n>0 && !pathState().done[pp.id]){
+    if(ok/n>=0.7){ pathState().done[pp.id]=true; setTimeout(function(){ toast('¡Tema dominado: '+pp.t+'!'); },400); }
+    else { var tr=pathState().tries=pathState().tries||{}; tr[pp.id]=(tr[pp.id]||0)+1; if(tr[pp.id]>=2) setTimeout(function(){ toast('Lo dejamos para repasar más tarde y seguimos con el siguiente tema.'); },400); }
+  }
   P.grammar=(P.grammar||[]).concat([{topic:EX.topic, title:EX.title, n:n, ok:ok, t:Date.now()}]).slice(-30);
   updateStreak(); save('profile'); exSave(); renderEx(); $('exView').scrollTop=0;
 }
@@ -2620,7 +2652,8 @@ var PATH=[
 function pathSpecObj(title){ for(var i=0;i<PATH.length;i++) if(PATH[i].t===title && PATH[i].spec) return PATH[i]; return null; }
 function pathByTitle(title){ for(var i=0;i<PATH.length;i++) if(PATH[i].t===title) return PATH[i]; return null; }
 function pathState(){ P.path=P.path||{done:{}}; if(!P.path.done) P.path.done={}; return P.path; }
-function pathNext(){ var d=pathState().done; for(var i=0;i<PATH.length;i++) if(!d[PATH[i].id]) return PATH[i]; return null; }
+function pathTries(id){ return (pathState().tries||{})[id]||0; }
+function pathNext(){ var d=pathState().done, first=null; for(var i=0;i<PATH.length;i++){ if(d[PATH[i].id]) continue; if(!first) first=PATH[i]; if(pathTries(PATH[i].id)<2) return PATH[i]; } return first; }
 function pathDoneCount(){ var d=pathState().done, n=0; PATH.forEach(function(p){ if(d[p.id]) n++; }); return n; }
 function startPath(p){
   if(!getKey()){ showSheet('sh-settings'); toast('Primero añade tu clave de Claude.'); return; }
@@ -2662,7 +2695,7 @@ function renderPathList(w){
   PATH.forEach(function(p){
     if(p.lv!==last){ last=p.lv; list.append(h('div','section-label', p.lv==='A2'?'Nivel A2':'Nivel B1')); }
     var b=h('button','prow'+(d[p.id]?' done':'')+(nx&&nx.id===p.id?' cur':'')); b.type='button';
-    b.append(h('span','pn', d[p.id]?'✓':String(p.id)), h('span','pt',p.t));
+    b.append(h('span','pn', d[p.id]?'✓':String(p.id)), h('span','pt',p.t+(!d[p.id]&&pathTries(p.id)>=2?' · repasar más tarde':'')));
     b.addEventListener('click',function(){ startPath(p); }); list.append(b);
   });
   w.append(list);
