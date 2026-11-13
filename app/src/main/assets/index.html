@@ -418,6 +418,14 @@ textarea.ans-input{resize:none}
 .rback{display:flex;flex-direction:column;gap:8px;align-items:center;border-top:2px dashed var(--line);padding-top:14px}
 .rex{font-family:var(--f-de);font-size:1.05rem;line-height:1.4}.rexes{color:var(--muted);font-size:.9rem}
 .rbtns{display:flex;gap:8px}.rbtns .btn{flex:1}.btn.big{padding:14px 10px;font-size:1rem}
+
+.notes{width:100%;font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--paper);color:var(--ink);resize:vertical}
+.plist{display:flex;flex-direction:column;gap:6px}
+.prow{display:flex;align-items:center;gap:12px;text-align:left;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--sheet);cursor:pointer;font-size:.95rem}
+.prow .pn{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--blue-soft);color:var(--blue-ink);font-weight:700;font-size:.8rem}
+.prow.done .pn{background:var(--ok-soft);color:var(--ok)}
+.prow.cur{border-color:var(--blue-ink);box-shadow:0 0 0 1px var(--blue-ink)}
+.prow .pt{min-width:0;overflow-wrap:anywhere}
 </style>
 </head>
 <body>
@@ -1155,7 +1163,7 @@ window.__onBack = function(){
   if(!$('micTip').hidden){ $('micTip').hidden=true; return true; }
   if(mode==='ex'){ if(EX.stage==='run' && EX.confirmQuit){ EX.confirmQuit=false; renderRun(); return true; } setMode('chat'); return true; }
   if(mode==='w' && wBack()) return true;
-  if(mode==='r'){ if(R.stage==='review'||R.stage==='done'){ R.stage='home'; renderR(); return true; } setMode('chat'); return true; }
+  if(mode==='r'){ if(R.stage==='review'||R.stage==='done'||R.stage==='path'){ R.stage='home'; renderR(); return true; } setMode('chat'); return true; }
   if(mode==='q'){ setMode('chat'); return true; }
   if(mode==='w'){ setMode('chat'); return true; }
   return false;
@@ -1447,9 +1455,11 @@ async function exBatch(req, part){
 async function startExercises(q){
   if(!getKey()){ showSheet('sh-settings'); toast('Primero añade tu clave de Claude.'); return; }
   closeSheets(); stopSpeaking();
-  var req={topic:String(q.topic||'').trim()||'Gramática', offset:Math.max(-2,Math.min(2,q.offset||0)), mistakes:q.mistakes||null, avoid:q.avoid||[], count:q.count||(q.topic===DAILY_TOPIC?6:0)||EX.count||10, only:q.only!==undefined ? q.only : exKind};
+  var req={topic:String(q.topic||'').trim()||'Gramática', offset:Math.max(-2,Math.min(2,q.offset||0)), mistakes:q.mistakes||null, avoid:q.avoid||[], count:q.count||(q.topic===DAILY_TOPIC?6:q.topic===QUICK_TOPIC?2:q.topic===CLASSNOW_TOPIC?8:0)||EX.count||10, only:q.only!==undefined ? q.only : exKind};
   if(req.topic===DAILY_TOPIC && !q.spec) q.spec=dailySpec();
-  var cs=classSpec(req.topic); if(q.spec||cs){ req.spec=q.spec||cs.spec; if(cs&&cs.only&&q.only===undefined) req.only=cs.only; }
+  if(req.topic===QUICK_TOPIC && !q.spec) q.spec=dailySpec();
+  if(req.topic===CLASSNOW_TOPIC && !q.spec && P.classNotes) q.spec='The learner just had these topics in their German class and wants to practise exactly them (stay close to what they mention, add similar everyday sentences): '+P.classNotes;
+  var cs=classSpec(req.topic)||pathSpecObj(req.topic); if(q.spec||cs){ req.spec=q.spec||cs.spec; if(cs&&cs.only&&q.only===undefined) req.only=cs.only; }
   if(!req.only && /traduc|übersetz|translat/i.test(req.topic)) req.only='translate'; /* "traducir frases con zu…" asks for translation exercises */
   var id=++exSeq;
   EX={stage:'loading', count:req.count, req:req};
@@ -1518,6 +1528,8 @@ function exFinish(){
   var ok=EX.items.filter(function(q){ return q.state==='ok'; }).length, n=EX.items.length;
   EX.stage='done'; EX.ok=ok;
   if(EX.topic===DAILY_TOPIC){ P.daily=P.daily||{}; P.daily.ex=dayStr(); }
+  logAct('ex',n); logAct('ok',ok);
+  var pp=pathByTitle(EX.topic); if(pp && n>0 && ok/n>=0.7 && !pathState().done[pp.id]){ pathState().done[pp.id]=true; setTimeout(function(){ toast('¡Tema dominado: '+pp.t+'!'); },400); }
   P.grammar=(P.grammar||[]).concat([{topic:EX.topic, title:EX.title, n:n, ok:ok, t:Date.now()}]).slice(-30);
   updateStreak(); save('profile'); exSave(); renderEx(); $('exView').scrollTop=0;
 }
@@ -2416,7 +2428,7 @@ function repeatedError(){
   var best=null; Object.keys(by).forEach(function(k){ if(by[k].length>=3 && (!best || by[k].length>best.items.length)) best={name:ERR_CATS[k][0], items:by[k]}; });
   return best;
 }
-var DAILY_TOPIC='Sesión de hoy';
+var DAILY_TOPIC='Sesión de hoy', QUICK_TOPIC='Ejercicios rápidos';
 function dailySpec(){
   var pool=CLASS_TOPICS.filter(function(c){ return !/ocabulario|Estado civil|Carta/.test(c.t); });
   var a=pool[Math.floor(Math.random()*pool.length)], b;
@@ -2431,10 +2443,10 @@ function remGet(){
 function remSet(on,hh,mm){ try{ if(NATIVE) window.Android.setReminder(!!on, hh, mm); else kvSet('lena.rem', (on?'1':'0')+'|'+hh+'|'+mm); }catch(e){} }
 function two(n){ return (n<10?'0':'')+n; }
 
-function startReview(){
-  var q=reviewQueue();
+function startReview(quick){
+  var q=reviewQueue(); if(quick===true) q=q.slice(0,5);
   if(!q.length){ toast('Hoy no tienes palabras pendientes.'); return; }
-  R={stage:'review', queue:q.slice(), i:0, shown:false, st:{ok:0,hard:0,no:0}};
+  R={stage:'review', queue:q.slice(), i:0, shown:false, st:{ok:0,hard:0,no:0}, quick:quick===true};
   renderR();
 }
 function rateCard(r){
@@ -2442,7 +2454,7 @@ function rateCard(r){
   srsRate(w, r);
   R.st[['no','hard','ok'][r]]++;
   if(r===0 && !w._again){ w._again=true; R.queue.push(w); }
-  save('vocab'); R.i++; R.shown=false;
+  logAct('w'); save('vocab'); R.i++; R.shown=false;
   if(R.i>=R.queue.length){
     R.queue.forEach(function(x){ delete x._again; });
     P.daily=P.daily||{}; P.daily.words=dayStr(); updateStreak(); save('profile','vocab'); pushMeta();
@@ -2490,7 +2502,8 @@ function renderRDone(w){
   w.append(h('h2','ex-h2','¡Repaso hecho!'));
   w.append(h('p','ex-lead','Sabías '+R.st.ok+', dudaste en '+R.st.hard+' y no sabías '+R.st.no+'. Las difíciles volverán mañana.'));
   var b=h('div','rbtns');
-  if((P.daily||{}).ex!==dayStr()){ var e=h('button','btn primary big','Seguir: ejercicios de hoy'); e.type='button'; e.addEventListener('click',startDailyEx); b.append(e); }
+  if(R.quick){ var qe=h('button','btn primary big','Dos ejercicios rápidos'); qe.type='button'; qe.addEventListener('click',function(){ if(!getKey()){ showSheet('sh-settings'); return; } startExercises({topic:QUICK_TOPIC,count:2,spec:dailySpec()}); }); b.append(qe); }
+  else if((P.daily||{}).ex!==dayStr()){ var e=h('button','btn primary big','Seguir: ejercicios de hoy'); e.type='button'; e.addEventListener('click',startDailyEx); b.append(e); }
   var bk=h('button','btn big','Volver a Hoy'); bk.type='button'; bk.addEventListener('click',function(){ R.stage='home'; renderR(); }); b.append(bk);
   w.append(b);
 }
@@ -2516,6 +2529,28 @@ function renderToday(w){
   else { var b2=h('button','btn primary','Empezar'); b2.type='button'; b2.addEventListener('click',startDailyEx); r2.append(b2); }
   c.append(r2);
   w.append(c);
+
+  var qk=h('button','btn big','Hoy solo tengo 5 minutos'); qk.type='button'; qk.addEventListener('click',function(){ if(!n){ if(!getKey()){ showSheet('sh-settings'); return; } startExercises({topic:QUICK_TOPIC,count:2,spec:dailySpec()}); } else startReview(true); }); w.append(qk);
+
+  var pn=pathNext(), pc=h('div','tcard'); pc.append(h('div','section-label','Tu ruta de A2 a B1'));
+  var pb=h('div','meter'); var pf=h('span'); pf.style.width=Math.round(100*pathDoneCount()/PATH.length)+'%'; pb.append(pf); pc.append(pb);
+  pc.append(h('small',null, pathDoneCount()+' de '+PATH.length+' temas dominados'));
+  if(pn){ var pr=h('div','trow'), pl=h('div','tl'); pl.append(h('b',null,'Ahora toca: '+pn.t), h('small',null,'Nivel '+pn.lv+' · 10 ejercicios')); pr.append(pl); var pbt=h('button','btn primary','Empezar'); pbt.type='button'; pbt.addEventListener('click',function(){ startPath(pn); }); pr.append(pbt); pc.append(pr); }
+  else pc.append(h('p',null,'¡Has completado toda la ruta!'));
+  var pv=h('button','link','Ver todos los temas'); pv.type='button'; pv.addEventListener('click',function(){ R.stage='path'; renderR(); }); pc.append(pv);
+  w.append(pc);
+
+  var cn=h('div','tcard'); cn.append(h('div','section-label','Lo que dimos en clase'));
+  cn.append(h('p',null,'Cuéntame en una o dos líneas qué habéis visto y te preparo ejercicios y tarjetas de eso.'));
+  var ta=h('textarea','notes'); ta.rows=3; ta.placeholder='Ej.: hemos visto el genitivo, wegen y trotz, y el vocabulario de la casa'; ta.value=P.classNotes||''; ta.setAttribute('spellcheck','false'); cn.append(ta);
+  var cb2=h('button','btn primary','Crear ejercicios y tarjetas'); cb2.type='button'; cb2.addEventListener('click',function(){ classNow(ta.value, cb2); }); cn.append(cb2);
+  w.append(cn);
+
+  var ws=weekStats(), wc=h('div','tcard'); wc.append(h('div','section-label','Tu semana (últimos 7 días)'));
+  var sg=h('div','stats'); [[ws.days+' de 7','días practicados'],[ws.w,'palabras repasadas'],[ws.ex,'ejercicios hechos'],[ws.ex?Math.round(100*ws.ok/ws.ex)+' %':'—','aciertos'],[ws.mastered,'palabras bien aprendidas']].forEach(function(s2){ var dd=h('div','stat'); dd.append(h('b',null,String(s2[0])), h('span',null,s2[1])); sg.append(dd); });
+  wc.append(sg);
+  var re2=repeatedError(); wc.append(h('p','note', re2 ? 'Lo que más se te atasca: '+re2.name+'.' : (ws.days? 'Sin errores repetidos por ahora. Sigue así.' : 'Practica unos días y aquí verás tu avance.')));
+  w.append(wc);
 
   var rep=repeatedError();
   if(rep){
@@ -2544,11 +2579,94 @@ function renderToday(w){
 function renderR(){
   if(mode!=='r') return;
   var v=$('rView'), w=h('div','exwrap'), keep=(R.stage==='home')?v.scrollTop:0;
-  if(R.stage==='review') renderReview(w); else if(R.stage==='done') renderRDone(w); else renderToday(w);
+  if(R.stage==='path') renderPathList(w); else if(R.stage==='review') renderReview(w); else if(R.stage==='done') renderRDone(w); else renderToday(w);
   v.replaceChildren(w); v.scrollTop=keep;
 }
 window.__launch=function(){ try{ if(NATIVE && window.Android.takeLaunch && window.Android.takeLaunch()==='hoy'){ R.stage='home'; setMode('r'); } }catch(e){} };
 
+/* ---------- Ruta A2 → B1, clase de hoy, modo 5 minutos, resumen semanal ---------- */
+var PATH=[
+ {id:1,lv:'A2',t:'Perfekt: haben y sein',spec:'Perfekt of regular and common irregular verbs with haben and sein (ich habe gelernt, ich bin gefahren, ich habe gegessen); participle position at the end; verbs with sein (movement, change of state). Blank = participle or auxiliary.'},
+ {id:2,lv:'A2',t:'Verbos separables',spec:'Separable verbs (anrufen, aufstehen, einkaufen, mitkommen, anfangen): prefix at the end in main clauses (Ich stehe um sieben auf), in Perfekt (aufgestanden), with modal verbs (aufstehen müssen). Gaps = the verb or the prefix.'},
+ {id:3,lv:'A2',t:'Verbos modales',spec:'Modal verbs können, müssen, wollen, dürfen, sollen, mögen/möchten: conjugation in present and Präteritum (konnte, musste, wollte), infinitive at the end, meaning differences (müssen vs dürfen nicht).'},
+ {id:4,lv:'A2',t:'Acusativo: durch, ohne, gegen, für, um'},
+ {id:5,lv:'A2',t:'Dativo: aus, bei, mit, nach, seit, von, zu'},
+ {id:6,lv:'A2',t:'Verbos con dativo',spec:'Verbs that take a dative object: helfen, gehören, gefallen, schmecken, danken, antworten, gratulieren, passen, fehlen, wehtun. Gaps = the dative pronoun or article (mir, dir, ihm, dem, der).'},
+ {id:7,lv:'A2',t:'Acusativo o dativo (todas las preposiciones)'},
+ {id:8,lv:'A2',t:'Preposiciones de lugar: wo o wohin',spec:'Two-way prepositions (in, an, auf, über, unter, vor, hinter, neben, zwischen): dative for location (wo?) and accusative for movement (wohin?); contractions ins, im, am, ans, aufs; verbs stehen/stellen, liegen/legen, sitzen/setzen, hängen/hängen.'},
+ {id:9,lv:'A2',t:'Pronombres personales y su orden',spec:'Personal pronouns in accusative and dative (mich/mir, dich/dir, ihn/ihm, sie/ihr, uns, euch, sie/ihnen) and their order in the sentence: Ich gebe es ihm; Ich gebe ihm das Buch; pronoun before noun.'},
+ {id:10,lv:'A2',t:'Adjetivos: terminaciones con artículo',spec:'Adjective endings after definite and indefinite articles in nominative and accusative (der große Hund, ein großer Hund, die kleine Katze, das neue Auto, den roten Wagen). Gap = the adjective ending or the whole adjective.'},
+ {id:11,lv:'A2',t:'Comparativo y superlativo',spec:'Comparative and superlative: schneller als, am schnellsten, der größte; irregular gut/besser/am besten, viel/mehr/am meisten, gern/lieber/am liebsten; so ... wie.'},
+ {id:12,lv:'A2',t:'weil, denn y dass',spec:'Causal and content clauses: weil (verb at the end), denn (verb in second position), dass (verb at the end); choose the right connector and the right word order.'},
+ {id:13,lv:'A2',t:'wenn, als y ob',spec:'wenn (present, future, repeated past: whenever), als (single event in the past), ob (indirect yes/no question); verb at the end; use "order" exercises for the word order in subordinate clauses.'},
+ {id:14,lv:'A2',t:'Imperativo',spec:'Imperative forms with du, ihr and Sie (Komm! Kommt! Kommen Sie!), irregular (Sprich! Fahr! Nimm!), separable verbs (Ruf mich an!), sein (Sei still!), polite requests with bitte.'},
+ {id:15,lv:'A2',t:'Verbos reflexivos',spec:'Reflexive verbs: sich freuen, sich waschen, sich treffen, sich setzen, sich erinnern, sich interessieren; reflexive pronouns in accusative and dative (mich/mir, dich/dir, sich), position in the sentence.'},
+ {id:16,lv:'A2',t:'Infinitivo con zu: cuándo usarlo'},
+ {id:17,lv:'A2',t:'um … zu, damit, ohne … zu'},
+ {id:18,lv:'B1',t:'Verbos con preposición + acusativo'},
+ {id:19,lv:'B1',t:'Verbos con preposición + dativo'},
+ {id:20,lv:'B1',t:'Preguntas con wo(r)- / Präposition + wen/wem'},
+ {id:21,lv:'B1',t:'Respuestas con da(r)- / preposición + pronombre'},
+ {id:22,lv:'B1',t:'Präteritum de verbos frecuentes',spec:'Präteritum of common verbs (war, hatte, ging, kam, sah, fand, nahm, gab, wusste, dachte, brachte, blieb, schrieb) and regular verbs (machte, sagte, lernte); Präteritum vs Perfekt in writing and speaking.'},
+ {id:23,lv:'B1',t:'Konjunktiv II: würde, hätte, wäre',spec:'Konjunktiv II for wishes, polite requests and unreal conditions: würde + infinitive, hätte, wäre, könnte, müsste; wenn ich Zeit hätte, würde ich...; Ich hätte gern...; Könnten Sie...?'},
+ {id:24,lv:'B1',t:'Pronombres relativos',spec:'Relative clauses with der/die/das/den/dem/dessen: the pronoun agrees in gender and number with the noun and takes the case required by the verb inside the relative clause; verb at the end. Gap = the relative pronoun.'},
+ {id:25,lv:'B1',t:'Genitivo: posesión y nombres'},
+ {id:26,lv:'B1',t:'Preposiciones con genitivo: wegen, trotz, während…'},
+ {id:27,lv:'B1',t:'obwohl, während, bevor y nachdem',spec:'Subordinate connectors obwohl (although), während (while), bevor (before), nachdem (after, with Perfekt/Plusquamperfekt in the subordinate clause), seit(dem), bis; verb at the end; main clause after a subordinate clause starts with the verb.'},
+ {id:28,lv:'B1',t:'Voz pasiva (presente y pasado)',spec:'Passive voice with werden + participle in present and Präteritum (Das Haus wird gebaut, Das Haus wurde gebaut); von + dative for the agent; passive with modal verbs (muss gemacht werden). Use transform exercises active to passive.'},
+ {id:29,lv:'B1',t:'Futuro con werden y suposiciones',spec:'Futur I with werden + infinitive for plans and predictions, and for assumptions (Er wird wohl krank sein); present tense with time words as the usual future (Morgen fahre ich); werden as a full verb (Es wird kalt).'},
+ {id:30,lv:'B1',t:'Estructuras de la carta y conectores',spec:'Linking and writing a short personal letter/email: Sehr geehrte..., Liebe..., ich schreibe dir, weil..., deshalb, trotzdem, außerdem, deswegen, zuerst, dann, danach, schließlich; word order after deshalb/trotzdem (verb in second position).'}
+];
+function pathSpecObj(title){ for(var i=0;i<PATH.length;i++) if(PATH[i].t===title && PATH[i].spec) return PATH[i]; return null; }
+function pathByTitle(title){ for(var i=0;i<PATH.length;i++) if(PATH[i].t===title) return PATH[i]; return null; }
+function pathState(){ P.path=P.path||{done:{}}; if(!P.path.done) P.path.done={}; return P.path; }
+function pathNext(){ var d=pathState().done; for(var i=0;i<PATH.length;i++) if(!d[PATH[i].id]) return PATH[i]; return null; }
+function pathDoneCount(){ var d=pathState().done, n=0; PATH.forEach(function(p){ if(d[p.id]) n++; }); return n; }
+function startPath(p){
+  if(!getKey()){ showSheet('sh-settings'); toast('Primero añade tu clave de Claude.'); return; }
+  startExercises({topic:p.t});
+}
+/* activity log for the weekly summary */
+function logAct(k, n){ P.log=P.log||{}; var t=dayStr(); P.log[t]=P.log[t]||{w:0,ex:0,ok:0,q:0}; P.log[t][k]=(P.log[t][k]||0)+(n||1);
+  var keys=Object.keys(P.log).sort(); while(keys.length>30){ delete P.log[keys.shift()]; } }
+function weekStats(){
+  var out={days:0,w:0,ex:0,ok:0,q:0}; for(var i=0;i<7;i++){ var d=new Date(); d.setDate(d.getDate()-i); var e=(P.log||{})[dayStr(d)]; if(!e) continue; out.days++; out.w+=e.w||0; out.ex+=e.ex||0; out.ok+=e.ok||0; out.q+=e.q||0; }
+  out.mastered=V.words.filter(function(w){ return (w.box||0)>=3; }).length; return out;
+}
+/* "Lo que dimos en clase" */
+var CLASSNOW_TOPIC='Lo que dimos en clase';
+async function classNow(text, btn){
+  text=String(text||'').trim();
+  if(text.length<4){ toast('Escribe qué habéis visto en clase.'); return; }
+  if(!getKey()){ showSheet('sh-settings'); toast('Primero añade tu clave de Claude.'); return; }
+  btn.disabled=true; btn.textContent='Preparando tarjetas…';
+  P.classNotes=text.slice(0,600); save('profile');
+  try{
+    var j=await aiJSON('A Spanish-speaking student of German (level A2-B1) just had a lesson. Their notes (Spanish or German): """'+text.slice(0,600)+'""" \nReturn ONLY this JSON: {"cards":[{"de":"German word or phrase (nouns with article; verbs with their preposition if they have one)","es":"short Spanish meaning","ex":"one natural German example sentence at A2-B1 level","exEs":"Spanish translation of the example"}]} with 6 to 12 useful cards that come from or are directly needed for what the notes mention. No duplicates, no parentheses inside "ex".', 1800);
+    var cards=Array.isArray(j.cards)?j.cards:[], n=0;
+    cards.forEach(function(c){ if(!c||!c.de||!c.es||findWord(c.de)) return; V.words.push({de:String(c.de).trim(), es:String(c.es).trim(), ex:String(c.ex||'').trim(), exEs:String(c.exEs||'').trim(), uses:0, at:-500, cls:1, rev:0}); n++; });
+    save('vocab'); renderHeader();
+    toast(n? 'Añadí '+n+' tarjetas nuevas a tu repaso.' : 'No encontré palabras nuevas; sigo con los ejercicios.');
+  }catch(e){ toast('No pude crear las tarjetas ('+((e&&e.code)||'error')+'). Hago solo los ejercicios.'); }
+  btn.disabled=false; btn.textContent='Crear ejercicios y tarjetas';
+  startExercises({topic:CLASSNOW_TOPIC, count:8, spec:'The learner just had these topics in their German class and wants to practise exactly them (stay close to what they mention, add similar everyday sentences): '+text.slice(0,600)});
+}
+function renderPathList(w){
+  var top=h('div','rtop'); top.append(h('span','', pathDoneCount()+' de '+PATH.length+' temas'));
+  var bk=h('button','link','Volver'); bk.type='button'; bk.addEventListener('click',function(){ R.stage='home'; renderR(); }); top.append(bk); w.append(top);
+  var bar=h('div','meter'); var f=h('span'); f.style.width=Math.round(100*pathDoneCount()/PATH.length)+'%'; bar.append(f); w.append(bar);
+  w.append(h('h2','ex-h2','Ruta de A2 a B1'));
+  w.append(h('p','ex-lead','Los temas van en orden. Un tema cuenta como dominado cuando aciertas el 70 % o más de sus ejercicios. Puedes tocar cualquiera.'));
+  var nx=pathNext(), d=pathState().done, last='';
+  var list=h('div','plist');
+  PATH.forEach(function(p){
+    if(p.lv!==last){ last=p.lv; list.append(h('div','section-label', p.lv==='A2'?'Nivel A2':'Nivel B1')); }
+    var b=h('button','prow'+(d[p.id]?' done':'')+(nx&&nx.id===p.id?' cur':'')); b.type='button';
+    b.append(h('span','pn', d[p.id]?'✓':String(p.id)), h('span','pt',p.t));
+    b.addEventListener('click',function(){ startPath(p); }); list.append(b);
+  });
+  w.append(list);
+}
 /* ---------- Start ---------- */
 if(NATIVE) $('micBtn').classList.add('native');
 loadAll();

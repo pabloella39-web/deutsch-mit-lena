@@ -83,3 +83,9 @@ En **Ejercicios** hay un bloque «De clase» con 16 temas de tus apuntes: prepos
 - **Sesión diaria**: repaso de palabras + 6 ejercicios que mezclan tus temas de clase y traducciones.
 - **Error que se repite**: si cometes 3 veces el mismo tipo de error, aparece un botón para practicar solo eso.
 - **Aviso diario**: notificación a la hora que elijas (19:00 por defecto). No avisa si ya has practicado ese día. En Android 13 o superior la app pide permiso para notificaciones.
+
+## Ruta y herramientas semanales (v19)
+- **Ruta de A2 a B1**: 30 temas en orden. Un tema se da por dominado con un 70 % de aciertos o más.
+- **Lo que dimos en clase**: escribes qué habéis visto y la app crea tarjetas y 8 ejercicios de eso.
+- **Hoy solo tengo 5 minutos**: 5 tarjetas y 2 ejercicios rápidos.
+- **Tu semana**: días practicados, palabras repasadas, ejercicios, aciertos y el error que más se repite.
