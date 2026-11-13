@@ -417,7 +417,8 @@ textarea.ans-input{resize:none}
 .rbig2{font-family:var(--f-de);font-size:1.5rem;font-weight:700;line-height:1.25;overflow-wrap:anywhere}
 .rback{display:flex;flex-direction:column;gap:8px;align-items:center;border-top:2px dashed var(--line);padding-top:14px}
 .rex{font-family:var(--f-de);font-size:1.05rem;line-height:1.4}.rexes{color:var(--muted);font-size:.9rem}
-.rbtns{display:flex;gap:8px}.rbtns .btn{flex:1}.btn.big{padding:14px 10px;font-size:1rem}
+.rtype{width:100%;font-size:1.1rem;text-align:center}.rok{color:var(--ok);font-weight:700}.rbad{color:var(--red);font-weight:700}
+.rbtns{display:flex;gap:8px;flex-wrap:wrap}.rbtns .btn{flex:1}.btn.big{padding:14px 10px;font-size:1rem}
 
 .notes{width:100%;font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--paper);color:var(--ink);resize:vertical}
 .plist{display:flex;flex-direction:column;gap:6px}
@@ -1377,6 +1378,7 @@ function classSpec(topic){ for(var i=0;i<CLASS_TOPICS.length;i++) if(CLASS_TOPIC
 var EX_THEMES=['home and family','work and school','food and shopping','travel and transport','friends and free time','health and the city'];
 function exPrompt(q, part){
   part=part||{n:q.count, intro:true, k:0, of:1};
+  if(q.mixAll) q=Object.assign({}, q, {spec:allClassSpec()});
   var li=Math.max(0, Math.min(LEVELS.length-1, levelIdx(P.score)+(q.offset||0))), L=LEVELS[li];
   var diff = q.offset>0 ? "a little harder than the learner's usual level" : q.offset<0 ? "a little easier than the learner's usual level, with short, clear sentences" : "right at the learner's level";
   var known=V.words.map(function(w){ return w.de; }).slice(-30);
@@ -1479,11 +1481,12 @@ async function exVerify(items){
 async function startExercises(q){
   if(!getKey()){ showSheet('sh-settings'); toast('Primero añade tu clave de Claude.'); return; }
   closeSheets(); stopSpeaking();
-  var req={topic:String(q.topic||'').trim()||'Gramática', offset:Math.max(-2,Math.min(2,q.offset||0)), mistakes:q.mistakes||null, avoid:q.avoid||[], count:q.count||(q.topic===DAILY_TOPIC?6:q.topic===QUICK_TOPIC?2:q.topic===CLASSNOW_TOPIC?8:0)||EX.count||10, only:q.only!==undefined ? q.only : exKind};
-  if(req.topic===DAILY_TOPIC && !q.spec) q.spec=dailySpec();
-  if(req.topic===QUICK_TOPIC && !q.spec) q.spec=dailySpec();
+  var req={topic:String(q.topic||'').trim()||'Gramática', offset:Math.max(-2,Math.min(2,q.offset||0)), mistakes:q.mistakes||null, avoid:q.avoid||[], count:q.count||(q.topic===DAILY_TOPIC?6:q.topic===QUICK_TOPIC?2:q.topic===MIX_TOPIC?10:q.topic===CLASSNOW_TOPIC?8:0)||EX.count||10, only:q.only!==undefined ? q.only : exKind};
+  if(isMixTopic(req.topic)){ req.mixAll=true; q.spec=null; }
+  if(q.offset===undefined){ var lastG=(P.grammar||[]).filter(function(g){ return g.topic===req.topic && g.n; }).pop(); if(lastG){ var rt=lastG.ok/lastG.n; req.offset = rt>=0.85 ? 1 : rt<0.5 ? -1 : 0; } }
+  if(req.mixAll || (P.seenEx&&P.seenEx.length)) req.avoid=(req.avoid||[]).concat((P.seenEx||[]).slice(-30));
   if(req.topic===CLASSNOW_TOPIC && !q.spec && P.classNotes) q.spec='The learner just had these topics in their German class and wants to practise exactly them (stay close to what they mention, add similar everyday sentences): '+P.classNotes;
-  var cs=classSpec(req.topic)||pathSpecObj(req.topic); if(q.spec||cs){ req.spec=q.spec||cs.spec; if(cs&&cs.only&&q.only===undefined) req.only=cs.only; }
+  var cs=req.mixAll?null:(classSpec(req.topic)||pathSpecObj(req.topic)); if(q.spec||cs){ req.spec=q.spec||cs.spec; if(cs&&cs.only&&q.only===undefined) req.only=cs.only; }
   if(!req.only && /traduc|übersetz|translat/i.test(req.topic)) req.only='translate'; /* "traducir frases con zu…" asks for translation exercises */
   var id=++exSeq;
   EX={stage:'loading', count:req.count, req:req};
@@ -1557,6 +1560,8 @@ function exFinish(){
   EX.stage='done'; EX.ok=ok;
   if(EX.topic===DAILY_TOPIC){ P.daily=P.daily||{}; P.daily.ex=dayStr(); }
   logAct('ex',n); logAct('ok',ok);
+  P.seenEx=(P.seenEx||[]).concat(EX.items.map(function(it){ return it.full; }).filter(Boolean)).slice(-120);
+  if(n>=3){ var rt2=ok/n; P.score=Math.max(20,Math.min(100,(P.score||32)+(rt2>=0.85?0.8:rt2<0.5?-0.5:0.2))); }
   var pp=pathByTitle(EX.topic);
   if(pp && n>0 && !pathState().done[pp.id]){
     if(ok/n>=0.7){ pathState().done[pp.id]=true; setTimeout(function(){ toast('¡Tema dominado: '+pp.t+'!'); },400); }
@@ -1633,7 +1638,7 @@ function renderPick(){
   w.append(f);
 
   var sc0=h('div','classbox'); sc0.append(h('div','section-label','De clase: lo que has dado en el curso'));
-  var cc=h('div','chips'); CLASS_TOPICS.forEach(function(c){ var b=h('button','chip strong',c.t); b.type='button'; b.addEventListener('click',function(){ startExercises({topic:c.t}); }); cc.append(b); });
+  var cc=h('div','chips'); var mixb=h('button','chip strong','🔀 Todo mezclado al azar'); mixb.type='button'; mixb.addEventListener('click',function(){ startExercises({topic:MIX_TOPIC}); }); cc.append(mixb); CLASS_TOPICS.forEach(function(c){ var b=h('button','chip strong',c.t); b.type='button'; b.addEventListener('click',function(){ startExercises({topic:c.t}); }); cc.append(b); });
   sc0.append(cc); w.append(sc0);
   var ms=(P.mistakes||[]).filter(function(m){ return m && m.note; });
   if(ms.length){
@@ -2486,13 +2491,18 @@ function rateCard(r){
   srsRate(w, r);
   R.st[['no','hard','ok'][r]]++;
   if(r===0 && !w._again){ w._again=true; R.queue.push(w); }
-  logAct('w'); save('vocab'); R.i++; R.shown=false;
+  logAct('w'); save('vocab'); R.i++; R.shown=false; R.res=null;
   if(R.i>=R.queue.length){
     R.queue.forEach(function(x){ delete x._again; });
     P.daily=P.daily||{}; P.daily.words=dayStr(); updateStreak(); save('profile','vocab'); pushMeta();
     R.stage='done';
   }
   renderR();
+}
+function acceptedForms(c){
+  var base=String(c.de||'').replace(/\s*\(\+ zu\)/g,'').replace(/\s*\+\s*(Akk|Dat)\b/g,'').trim();
+  var l=[base, base.replace(/^(der|die|das)\s+/i,''), base.replace(/^sich\s+/i,''), base.replace(/^(der|die|das|sich)\s+/i,'')];
+  return l.filter(function(x,i){ return x && l.indexOf(x)===i; });
 }
 function maskWord(w){
   var m=/^(?:der|die|das)\s+(\S+)$/i.exec(String(w.de||'').trim()); if(!m || !w.ex) return null;
@@ -2505,9 +2515,9 @@ function renderReview(w){
   var top=h('div','rtop'); top.append(h('span',null,'Palabra '+(R.i+1)+' de '+total));
   var q=h('button','link','Salir'); q.type='button'; q.addEventListener('click',function(){ R.stage='home'; renderR(); }); top.append(q); w.append(top);
   var bar=h('div','meter'); var f=h('span'); f.style.width=Math.round(100*R.i/total)+'%'; bar.append(f); w.append(bar);
-  var recog=(c.box||0)<2;
+  var recog=(c.box||0)<2, typed=(c.box||0)>=4;
   var card=h('div','rcard');
-  card.append(h('div','rlab', recog ? 'Alemán → español: ¿qué significa?' : 'Español → alemán: ¿cómo se dice?'));
+  card.append(h('div','rlab', recog ? 'Alemán → español: ¿qué significa?' : typed ? 'Escríbelo en alemán (nivel difícil)' : 'Español → alemán: ¿cómo se dice?'));
   if(recog){ card.append(deEl(c,'rbig')); }
   else {
     card.append(h('div','rbig',c.es));
@@ -2522,7 +2532,22 @@ function renderReview(w){
   }
   w.append(card);
   var row=h('div','rbtns');
-  if(!R.shown){
+  if(typed){
+    if(!R.shown){
+      var inp=h('input','timein rtype'); inp.type='text'; inp.lang='de'; inp.setAttribute('autocomplete','off'); inp.setAttribute('autocapitalize','off'); inp.setAttribute('spellcheck','false'); inp.placeholder='Escribe la palabra en alemán';
+      var chk=function(){ var g=inp.value.trim(); if(!g) return; var j=judge(g, acceptedForms(c)); R.res={ok:!!j.ok, given:g, note:j.note||''}; R.shown=true; renderR(); };
+      inp.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); chk(); } });
+      card.append(inp);
+      var ck=h('button','btn primary big','Comprobar'); ck.type='button'; ck.addEventListener('click',chk); row.append(ck);
+      var dk=h('button','btn big','No lo sé'); dk.type='button'; dk.addEventListener('click',function(){ R.res={ok:false,given:'',note:''}; R.shown=true; renderR(); }); row.append(dk);
+      setTimeout(function(){ try{ inp.focus(); }catch(e){} },60);
+    } else {
+      var rs=R.res||{ok:false};
+      card.append(h('div', rs.ok?'rok':'rbad', rs.ok ? '¡Correcto!'+(rs.note?' '+rs.note:'') : (rs.given?'Tu respuesta: '+rs.given:'Sin respuesta')));
+      var nx=h('button','btn primary big','Siguiente'); nx.type='button'; nx.addEventListener('click',function(){ rateCard(rs.ok?(rs.note?1:2):0); }); row.append(nx);
+      if(!rs.ok && rs.given){ var al=h('button','btn big','Mi respuesta valía'); al.type='button'; al.addEventListener('click',function(){ rateCard(1); }); row.append(al); }
+    }
+  } else if(!R.shown){
     var sh=h('button','btn primary big','Mostrar respuesta'); sh.type='button'; sh.addEventListener('click',function(){ R.shown=true; renderR(); }); row.append(sh);
   } else {
     [['No la sabía',0,''],['Casi',1,''],['La sabía',2,'primary']].forEach(function(o){ var b=h('button','btn big '+o[2],o[0]); b.type='button'; b.addEventListener('click',function(){ rateCard(o[1]); }); row.append(b); });
@@ -2534,17 +2559,18 @@ function renderRDone(w){
   w.append(h('h2','ex-h2','¡Repaso hecho!'));
   w.append(h('p','ex-lead','Sabías '+R.st.ok+', dudaste en '+R.st.hard+' y no sabías '+R.st.no+'. Las difíciles volverán mañana.'));
   var b=h('div','rbtns');
-  if(R.quick){ var qe=h('button','btn primary big','Dos ejercicios rápidos'); qe.type='button'; qe.addEventListener('click',function(){ if(!getKey()){ showSheet('sh-settings'); return; } startExercises({topic:QUICK_TOPIC,count:2,spec:dailySpec()}); }); b.append(qe); }
+  if(R.quick){ var qe=h('button','btn primary big','Dos ejercicios rápidos'); qe.type='button'; qe.addEventListener('click',function(){ if(!getKey()){ showSheet('sh-settings'); return; } startExercises({topic:QUICK_TOPIC,count:2}); }); b.append(qe); }
   else if((P.daily||{}).ex!==dayStr()){ var e=h('button','btn primary big','Seguir: ejercicios de hoy'); e.type='button'; e.addEventListener('click',startDailyEx); b.append(e); }
   var bk=h('button','btn big','Volver a Hoy'); bk.type='button'; bk.addEventListener('click',function(){ R.stage='home'; renderR(); }); b.append(bk);
   w.append(b);
 }
 function startDailyEx(){
   if(!getKey()){ showSheet('sh-settings'); toast('Primero añade tu clave de Claude.'); return; }
-  startExercises({topic:DAILY_TOPIC, count:6, spec:dailySpec()});
+  startExercises({topic:DAILY_TOPIC, count:6});
 }
 function renderToday(w){
   var D2=P.daily||{}, t=dayStr(), n=dueCount();
+  topUpWords(false);
   var hd=h('div'); hd.append(h('h2','ex-h2','Hoy'));
   var st=liveStreak();
   hd.append(h('p','ex-lead', (st? 'Racha: '+st+(st===1?' día':' días')+' seguidos. ':'Empieza hoy tu racha. ')+'Diez minutos al día valen más que dos horas el domingo.')); w.append(hd);
@@ -2555,14 +2581,15 @@ function renderToday(w){
   if(D2.words===t || !n){ r1.append(h('span','tdone', D2.words===t?'✓':'—')); }
   else { var b1=h('button','btn primary','Empezar'); b1.type='button'; b1.addEventListener('click',startReview); r1.append(b1); }
   c.append(r1);
-  var r2=h('div','trow'), l2=h('div','tl'); l2.append(h('b',null,'2. Ejercicios del día'), h('small',null, D2.ex===t ? 'Hecho hoy' : '6 ejercicios con tus temas de clase y traducciones'));
+  var r2=h('div','trow'), l2=h('div','tl'); l2.append(h('b',null,'2. Ejercicios del día'), h('small',null, D2.ex===t ? 'Hecho hoy' : '6 ejercicios al azar con TODO lo de clase'));
   r2.append(l2);
   if(D2.ex===t){ r2.append(h('span','tdone','✓')); }
   else { var b2=h('button','btn primary','Empezar'); b2.type='button'; b2.addEventListener('click',startDailyEx); r2.append(b2); }
   c.append(r2);
   w.append(c);
 
-  var qk=h('button','btn big','Hoy solo tengo 5 minutos'); qk.type='button'; qk.addEventListener('click',function(){ if(!n){ if(!getKey()){ showSheet('sh-settings'); return; } startExercises({topic:QUICK_TOPIC,count:2,spec:dailySpec()}); } else startReview(true); }); w.append(qk);
+  var tt=h('button','btn primary big','Repaso total: 10 ejercicios al azar de todo lo de clase'); tt.type='button'; tt.addEventListener('click',function(){ if(!getKey()){ showSheet('sh-settings'); toast('Primero añade tu clave de Claude.'); return; } startExercises({topic:MIX_TOPIC}); }); w.append(tt);
+  var qk=h('button','btn big','Hoy solo tengo 5 minutos'); qk.type='button'; qk.addEventListener('click',function(){ if(!n){ if(!getKey()){ showSheet('sh-settings'); return; } startExercises({topic:QUICK_TOPIC,count:2}); } else startReview(true); }); w.append(qk);
 
   var pn=pathNext(), pc=h('div','tcard'); pc.append(h('div','section-label','Tu ruta de A2 a B1'));
   var pb=h('div','meter'); var pf=h('span'); pf.style.width=Math.round(100*pathDoneCount()/PATH.length)+'%'; pb.append(pf); pc.append(pb);
@@ -2673,7 +2700,7 @@ async function classNow(text, btn){
   if(text.length<4){ toast('Escribe qué habéis visto en clase.'); return; }
   if(!getKey()){ showSheet('sh-settings'); toast('Primero añade tu clave de Claude.'); return; }
   btn.disabled=true; btn.textContent='Preparando tarjetas…';
-  P.classNotes=text.slice(0,600); save('profile');
+  P.classNotes=text.slice(0,600); P.classAll=(P.classAll||[]).concat([text.slice(0,300)]).slice(-30); save('profile');
   try{
     var j=await aiJSON('A Spanish-speaking student of German (level A2-B1) just had a lesson. Their notes (Spanish or German): """'+text.slice(0,600)+'""" \nReturn ONLY this JSON: {"cards":[{"de":"German word or phrase (nouns with article; verbs with their preposition if they have one)","es":"short Spanish meaning","ex":"one natural German example sentence at A2-B1 level","exEs":"Spanish translation of the example"}]} with 6 to 12 useful cards that come from or are directly needed for what the notes mention. No duplicates, no parentheses inside "ex".', 1800);
     var cards=Array.isArray(j.cards)?j.cards:[], n=0;
@@ -2699,6 +2726,48 @@ function renderPathList(w){
     b.addEventListener('click',function(){ startPath(p); }); list.append(b);
   });
   w.append(list);
+}
+/* ---------- Repaso total: everything from class, random every time ---------- */
+var CLASS_SENT=[{"de":"Geliebte Dorothee, seit der Party letztes Wochenende","es":"Querida Dorothee, desde la fiesta del fin de semana pasado"},{"de":"muss ich immer an Dich denken. Es war ein so wunderbarer Abend mit Dir! Beim Tanzen mit Dir habe ich","es":"tengo que pensar siempre en ti. ¡Fue una noche tan maravillosa contigo! Mientras bailaba contigo,"},{"de":"die Welt um uns herum vergessen. Dein fröhliches Lachen, Deine strahlenden Augen und","es":"olvidé el mundo que nos rodeaba. Tu risa alegre, tus ojos radiantes y"},{"de":"Deine warme Stimme haben mich ganz gefangen. Ich kann mich nicht mehr auf meine Arbeit konzentrieren, kann nichts","es":"tu cálida voz me han cautivado por completo. Ya no puedo concentrarme en mi trabajo, no puedo"},{"de":"mehr essen und zähle nur die Stunden, bis wir uns wiedersehen. Ich hoffe so sehr, dass auch Du","es":"comer nada más y solo cuento las horas hasta que nos volvamos a ver. Espero tanto que tú también"},{"de":"gern an mich denkst. So viele Dinge gibt es, die ich Dir erzählen möchte, und so vieles","es":"pienses en mí con gusto. Hay tantas cosas que quiero contarte, y tantas cosas"},{"de":"möchte ich von Dir wissen! Schenk mir doch ein bisschen Zeit,","es":"quiero saber de ti. Regálame un poco de tiempo,"},{"de":"damit wir uns besser kennenlernen können. Bitte ruf mich an! Ich habe Dir meine Handynummer gegeben,","es":"para que nos conozcamos mejor. ¡Llámame, por favor! Te he dado mi número de móvil,"},{"de":"aber vielleicht hast Du sie verloren. Hier ist sie noch einmal: 0161/5679241. Wenn ich daran denke, dass ich","es":"pero quizá lo hayas perdido. Aquí está otra vez: 0161/5679241. Cuando pienso que quizá pronto"},{"de":"vielleicht bald Deine liebe Stimme höre, habe ich Schmetterlinge im Bauch. Ich warte auf dich!","es":"oiré tu querida voz, siento mariposas en el estómago. ¡Te espero!"},{"de":"Dein schrecklich verliebter Max","es":"Tu terriblemente enamorado Max"},{"de":"Wir warten auf den Bus. → Worauf warten wir?"},{"de":"Sie bittet um einen Kaffee. → Worum bittet sie?"},{"de":"Er denkt an seinen Vater. → An wen denkt er?"},{"de":"Ich habe Angst vor Feuer. → Wovor habe ich Angst?"},{"de":"Er spricht über seine Reise. → Worüber spricht er?"},{"de":"Ich fange mit meiner Arbeit an. → Womit fange ich an?"},{"de":"Er verliebt sich in sie. → In wen verliebt er sich?"},{"de":"Es hängt vom Wetter ab. → Wovon hängt es ab?"},{"de":"Er hat mit dem Lehrer gesprochen. → Mit wem hat er gesprochen?"},{"de":"Ich interessiere mich für Architektur. → Wofür interessiere ich mich?"},{"de":"Entscheidest du dich für den Honda? → Ja, ich entscheide mich dafür."},{"de":"Erinnerst du dich an meinen Geburtstag? → Ja, ich erinnere mich daran."},{"de":"Versteht sie viel von Medizin? → Nein, sie versteht nichts davon."},{"de":"Hoffst du auf eine gute Note? → Ja, ich hoffe darauf."},{"de":"Hast du dich über deinen Bruder geärgert? → Ja, ich habe mich über ihn geärgert."},{"de":"Hast du Angst vor Feuer? → Nein, ich habe keine Angst davor."},{"de":"Hat er sich in die Frau verliebt? → Nein, er hat sich nicht in sie verliebt."},{"de":"Lacht ihr über den Lehrer? → Ja, wir lachen über ihn."},{"de":"Fährst du mit dem Bus in die Schule? → Ja, ich fahre damit in die Schule."},{"de":"Freust du dich auf die Reise? → Ja, ich freue mich darauf."},{"de":"Ich danke ihm für das Geschenk. → Ich danke ihm dafür."},{"de":"Wir fangen mit unserer Arbeit an. → Wir fangen damit an."},{"de":"Sabine und Hans ärgern sich über das Wetter. → Sabine und Hans ärgern sich darüber."},{"de":"Du bereitest dich auf die Prüfung vor. → Du bereitest dich darauf vor."},{"de":"Diana wartet auf die Gäste. → Diana wartet auf sie."},{"de":"Wir sind böse auf Karl. → Wir sind böse auf ihn."},{"de":"Ich denke an Karl. → Ich denke an ihn."},{"de":"Wir fragen nach dem Preis. → Wir fragen danach."},{"de":"Wir sprechen über unsere Tante. → Wir sprechen über sie."},{"de":"Silke hat sich in Heinz verliebt. → Silke hat sich in ihn verliebt."},{"de":"Sie haben mir angeboten, mir beim Umzug zu helfen."},{"de":"Wann fängst du (endlich) an, dich auf die Prüfung vorzubereiten?"},{"de":"Er kündigt an, nächstes Jahr die Stelle zu wechseln."},{"de":"Hör auf, die ganze Zeit unsere Tochter zu kritisieren."},{"de":"Ich beabsichtige, im nächsten Monat die DSH-Prüfung zu bestehen."},{"de":"Er bedauert, zu spät gekommen zu sein."},{"de":"Du solltest beginnen, für die nächste Klausur zu lernen."},{"de":"Bemüh dich darum, endlich eine eigene Wohnung zu finden."},{"de":"Der Student beschloss, sich für die DSH-Prüfung im Juni anzumelden."},{"de":"Sie bittet ihn, ihr die Tür aufzuhalten."},{"de":"Denk bitte daran, morgens immer die Fenster zuzumachen."},{"de":"Sie droht, den Vertrag zu kündigen."},{"de":"Ich empfehle dir, jeden Tag eine Stunde Vokabeln zu lernen."},{"de":"Sie entschließt sich, Ärztin zu werden."},{"de":"Meine Eltern erlauben uns, bis 23 Uhr wach zu bleiben."},{"de":"Ich freue mich (darüber), einen Studienplatz zu haben."},{"de":"Er fürchtet, die Arbeit zu verlieren."},{"de":"Ihnen gefällt es, im Wald spazieren zu gehen."},{"de":"Meinst du, es gelingt uns, den Kleiderschrank aufzubauen?"},{"de":"Glaubst du, im Lotto gewinnen zu können?"},{"de":"Ich kann euch (dabei) helfen, die Wände zu streichen."},{"de":"Wir hoffen, euch bald wiederzusehen."},{"de":"Es tut mir leid, dich verletzt zu haben."},{"de":"Er meint, genug gelernt zu haben."},{"de":"Die Deutsche Bahn meldet, die Strecke sperren zu müssen."},{"de":"Wir planen, ein Haus zu bauen."},{"de":"Ich rate dir, immer deine Hausaufgaben zu machen."},{"de":"Unsere Nachbarin scheint sehr schüchtern zu sein."},{"de":"Meine Eltern haben mir verboten, einen kurzen Rock zu tragen."},{"de":"Sie hatten vergessen, ihre Hausaufgaben zu machen."},{"de":"Er verlangt, sich auf den reservierten Platz zu setzen."},{"de":"Ich verspreche dir, mich zu melden."},{"de":"Versuch bitte mal, deutlicher zu sprechen."},{"de":"Wir haben vor, nächstes Jahr zu heiraten."},{"de":"Wir schlagen vor, jetzt eine kurze Pause zu machen."},{"de":"Er warnt sie davor, sich bei dem Koch zu beschweren."},{"de":"Die Kinder weigern sich, den Eltern im Garten zu helfen."},{"de":"Wir warten auf den Bus.","es":"Esperamos el autobús."},{"de":"Sie bittet um einen Kaffee.","es":"Ella pide un café."},{"de":"Er denkt an seinen Vater.","es":"Piensa en su padre."},{"de":"Ich habe Angst vor Feuer.","es":"Tengo miedo del fuego."},{"de":"Er spricht über seine Reise.","es":"Habla de su viaje."},{"de":"Er hat mit dem Lehrer gesprochen.","es":"Ha hablado con el profesor."},{"de":"Ich fange mit meiner Arbeit an.","es":"Empiezo con mi trabajo."},{"de":"Kannst du bitte mit dem Krach aufhören?","es":"¿Puedes dejar el ruido, por favor?"},{"de":"Er verliebt sich in sie.","es":"Se enamora de ella."},{"de":"Es hängt vom Wetter ab.","es":"Depende del tiempo."},{"de":"Ich interessiere mich für Architektur.","es":"Me intereso por la arquitectura."},{"de":"Ich entscheide mich für den Honda.","es":"Me decido por el Honda."},{"de":"Ich erinnere mich an deinen Geburtstag.","es":"Me acuerdo de tu cumpleaños."},{"de":"Sie versteht nichts von Medizin.","es":"No entiende nada de medicina."},{"de":"Ich hoffe auf eine gute Note.","es":"Espero una buena nota."},{"de":"Ich habe mich über meinen Bruder geärgert.","es":"Me enfadé con mi hermano."},{"de":"Wir lachen über den Lehrer.","es":"Nos reímos del profesor."},{"de":"Ich fahre mit dem Bus in die Schule.","es":"Voy en autobús al colegio."},{"de":"Ich freue mich auf die Reise.","es":"Tengo ganas del viaje."},{"de":"Ich freue mich über das Geschenk.","es":"Me alegra el regalo."},{"de":"Ich danke dir für das Geschenk.","es":"Te doy las gracias por el regalo."},{"de":"Warum bedankst du dich nicht bei ihm für seine Hilfe?","es":"¿Por qué no le agradeces su ayuda?"},{"de":"Du bereitest dich auf die Prüfung vor.","es":"Te preparas para el examen."},{"de":"Er nimmt an einem Deutschkurs teil.","es":"Participa en un curso de alemán."},{"de":"Gehört der große Schäferhund zu dir?","es":"¿El pastor alemán grande es tuyo?"},{"de":"Man muss mehr für Gerechtigkeit kämpfen.","es":"Hay que luchar más por la justicia."},{"de":"Ein Herr fragt nach unserem Chef.","es":"Un señor pregunta por nuestro jefe."},{"de":"Wie viel Geld gibst du für Zigaretten aus?","es":"¿Cuánto dinero gastas en cigarrillos?"},{"de":"Herr Sauerbier will nicht auf die Fragen antworten.","es":"El Sr. Sauerbier no quiere responder a las preguntas."},{"de":"Die Schüler beschweren sich beim Lehrer über den Test.","es":"Los alumnos se quejan del examen al profesor."},{"de":"Wofür soll ich mich bei dir entschuldigen?","es":"¿Por qué debería disculparme contigo?"},{"de":"Ich kann mich nicht an das Wetter gewöhnen.","es":"No consigo acostumbrarme al tiempo."},{"de":"Lädst du Evelyne zu deiner Party ein?","es":"¿Invitas a Evelyne a tu fiesta?"},{"de":"Ekelt sich deine Frau vor Spinnen?","es":"¿Tu mujer tiene asco a las arañas?"},{"de":"Viele Menschen glauben an die Gerechtigkeit.","es":"Mucha gente cree en la justicia."},{"de":"Du sollst ihm bei den Hausaufgaben helfen.","es":"Debes ayudarle con los deberes."},{"de":"Am Wochenende muss man mit Regen rechnen.","es":"El fin de semana hay que contar con lluvia."},{"de":"Familie Mann träumt von einem eigenen Haus.","es":"La familia Mann sueña con una casa propia."},{"de":"Das Essen schmeckt nach Spülmittel.","es":"La comida sabe a lavavajillas."},{"de":"Der Junge will nicht mit Mädchen spielen.","es":"El chico no quiere jugar con chicas."},{"de":"Die Ausstellung beschäftigt sich mit dem Oktoberfest.","es":"La exposición trata del Oktoberfest."},{"de":"Wir sind böse auf Karl.","es":"Estamos enfadados con Karl."},{"de":"Ich kann mich nicht mehr auf meine Arbeit konzentrieren.","es":"Ya no puedo concentrarme en mi trabajo."}];
+var MIX_TOPIC='Repaso total';
+function isMixTopic(t){ return t===DAILY_TOPIC||t===QUICK_TOPIC||t===MIX_TOPIC; }
+function pickN(arr,n){ return shuffled(arr).slice(0,n); }
+function allClassTopics(){
+  var extra=PATH.filter(function(p){ return [8,9,12,13,23,24].indexOf(p.id)>=0 && p.spec; }).map(function(p){ return {t:p.t,spec:p.spec}; });
+  return CLASS_TOPICS.filter(function(c){ return !/^Vocabulario de clase|^Verbos de clase con zu/.test(c.t); }).concat(extra);
+}
+function allClassSpec(){
+  var tops=pickN(allClassTopics(),4), sents=pickN(CLASS_SENT,5);
+  var mine=V.words.filter(function(w){ return w.cls; }); var pool=mine.length>=12 ? mine.map(function(w){ return {de:w.de,es:w.es}; }) : CLASS_WORDS;
+  var words=pickN(pool,6);
+  var o=['REVIEW OF EVERYTHING THE LEARNER HAS STUDIED IN THEIR GERMAN COURSE. Mix several different areas in this worksheet, one or two exercises per area, in random order (never a block on a single topic). Areas:'];
+  tops.forEach(function(c,i){ o.push(String.fromCharCode(65+i)+') '+c.t+': '+c.spec.slice(0,380)); });
+  o.push('Real sentences from the learner\'s class worksheets, to take structures and vocabulary from (write NEW sentences in the same spirit, do not copy them): '+sents.map(function(s){ return s.de; }).join(' | '));
+  o.push('Vocabulary from class to weave into sentences or to test with 1 "translate" or vocabulary "choice" exercise: '+words.map(function(w){ return w.de+' = '+w.es; }).join('; '));
+  var notes=(P.classAll||[]).slice(-12); if(notes.length) o.push('Things the learner reported from recent lessons (include one of them): '+pickN(notes,2).join(' || '));
+  o.push('Include 2 "translate" exercises (Spanish to German) that need structures from the areas above.');
+  return o.join('\n');
+}
+/* vocabulary keeps getting harder: when the unseen pool runs low, ask for new words one tier above what has been mastered */
+var VOC_THEMES=['la casa y la vivienda','el trabajo y los estudios','la salud y el cuerpo','viajes y transporte','comida y compras','la ciudad y los servicios','sentimientos y relaciones','tiempo libre y deporte','medio ambiente y noticias','tecnología y comunicación'];
+function vocTier(){
+  var m=V.words.filter(function(w){ return (w.box||0)>=3; }).length;
+  return m<20?'high A2 everyday words':m<50?'upper A2 / lower B1 words':m<100?'B1 words, including separable and reflexive verbs and useful connectors':'solid B1 words and common idiomatic expressions';
+}
+var topping=false;
+async function topUpWords(manual){
+  if(topping || !getKey()) return 0;
+  var fresh=V.words.filter(function(w){ return !w.rev; }).length;
+  if(!manual && (fresh>=8 || P.topupDay===dayStr())) return 0;
+  topping=true; var added=0;
+  try{
+    var theme=VOC_THEMES[(P.topupN||0)%VOC_THEMES.length];
+    var have=V.words.slice(-80).map(function(w){ return w.de; }).join('; ');
+    var j=await aiJSON('A Spanish-speaking learner of German needs NEW vocabulary a little harder than what they already know. Level: '+vocTier()+'. Theme: '+theme+'. Words they already have (do not repeat): '+have+'.\nReturn ONLY this JSON: {"words":[{"de":"German word (nouns with article; verbs with their usual preposition or reflexive form)","es":"short Spanish meaning","ex":"one natural German example sentence of at most 10 words, without parentheses","exEs":"Spanish translation of the example"}]} with exactly 10 useful words, mixing nouns, verbs and adjectives.', 2200);
+    (Array.isArray(j.words)?j.words:[]).forEach(function(c){ if(!c||!c.de||!c.es||findWord(c.de)) return; V.words.push({de:String(c.de).trim(),es:String(c.es).trim(),ex:String(c.ex||'').trim(),exEs:String(c.exEs||'').trim(),uses:0,at:-400,rev:0}); added++; });
+    if(added){ P.topupN=(P.topupN||0)+1; P.topupDay=dayStr(); save('vocab','profile'); renderHeader(); if(mode==='r') renderR(); toast('Añadí '+added+' palabras nuevas ('+theme+').'); }
+  }catch(e){ if(manual) toast('No pude añadir palabras ahora.'); }
+  topping=false; return added;
 }
 /* ---------- Start ---------- */
 if(NATIVE) $('micBtn').classList.add('native');
