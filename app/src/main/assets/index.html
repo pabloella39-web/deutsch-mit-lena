@@ -418,7 +418,8 @@ textarea.ans-input{resize:none}
 .rback{display:flex;flex-direction:column;gap:8px;align-items:center;border-top:2px dashed var(--line);padding-top:14px}
 .rex{font-family:var(--f-de);font-size:1.05rem;line-height:1.4}.rexes{color:var(--muted);font-size:.9rem}
 .rtype{width:100%;font-size:1.1rem;text-align:center}.rok{color:var(--ok);font-weight:700}.rbad{color:var(--red);font-weight:700}
-.rbtns{display:flex;gap:8px;flex-wrap:wrap}.rbtns .btn{flex:1}.btn.big{padding:14px 10px;font-size:1rem}
+.rbtns{display:flex;gap:8px;flex-wrap:wrap}
+.task-do{font-weight:700;color:var(--blue-ink);background:var(--blue-soft);border-radius:10px;padding:9px 12px;margin:8px 0}.rbtns .btn{flex:1}.btn.big{padding:14px 10px;font-size:1rem}
 
 .notes{width:100%;font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--paper);color:var(--ink);resize:vertical}
 .plist{display:flex;flex-direction:column;gap:6px}
@@ -1329,6 +1330,12 @@ function normalizeSet(r){
     if(type==='transform'){
       it.prompt=String(x.prompt_de||'').trim(); it.answers=strArr(x.answers);
       if(!it.prompt || !it.answers.length) return; if(!it.full) it.full=it.answers[0];
+      /* the learner must be told WHAT to change: task_es, or a specific instruction_es */
+      var tk=String(x.task_es||'').trim();
+      if(!tk){ var ie=String(x.instruction_es||'').trim(); if(ie.length>=18 && !/seg[uú]n (la )?instrucci[oó]n|^transforma (la|esta) (frase|oraci[oó]n)\.?$/i.test(ie)) tk=ie; }
+      if(tk.length<8) return;
+      if(it.answers.some(function(a){ return cmpNorm(tk).toLowerCase().indexOf(cmpNorm(a).toLowerCase())>=0 && cmpNorm(a).length>=8; })) return; /* the task must not contain the answer */
+      it.task=tk; it.ins=EX_INS.transform;
     }
     if(it.hint && (type==='gap'||type==='translate')){
       /* a hint must never give the answer away (e.g. "(daran)" for the blank "daran", or the whole translation) */
@@ -1402,7 +1409,7 @@ function exPrompt(q, part){
   o.push('- "choice": one German sentence with exactly one blank ___ and 3 options (or 4); exactly one option is correct. EXCEPTION for vocabulary topics: prompt_de may be just a German word or phrase with NO blank, with Spanish meanings as options; then full_de is the German word/phrase.');
   o.push('- "order": a correct German sentence of 4 to 9 words; the app shuffles its words and the learner puts them back in order. Give its Spanish translation in "translation_es".');
   o.push('- "translate": a natural Spanish sentence of 5 to 12 words in "prompt_es" that the learner must translate into German, written so the correct German needs the topic\'s grammar. In "answers" give the main German translation first and then 1 or 2 other equally correct, natural translations (other word order, synonyms). Do not give the German answer away. In "hint" give at most 3 German words or base forms the learner may not know (for example "(das Geschenk, schenken)"), or "" if none.');
-  o.push('- "transform": a German sentence in "prompt_de" and an instruction to change it (for example: put it in Perfekt, replace the noun with a pronoun, join it with weil). The learner writes the whole new sentence.');
+  o.push('- "transform": a German sentence in "prompt_de" and, in "task_es", a clear Spanish instruction saying WHAT to change (for example: "Ponla en Perfekt.", "Sustituye el sustantivo por un pronombre.", "Une las dos frases con weil.", "Conviértela en pregunta directa.", "Cambia a pasiva."). Without task_es the exercise is useless, so ALWAYS write it. It describes the operation but never contains the resulting sentence. The learner writes the whole new sentence.');
   o.push('');
   o.push('RULES');
   o.push('- For "gap" and "choice", the sentence is written out in full except for the blank ___. Replacing ___ with the answer must give exactly "full_de". The sentence must contain NO brackets and NO clues; clues such as the base form go only in "hint".');
@@ -1428,7 +1435,7 @@ function exPrompt(q, part){
   o.push('   {"type": "choice", "instruction_es": "...", "prompt_de": "... ___ ...", "options": ["...", "...", "..."], "answer": index of the correct option (0-based), "full_de": "...", "full_es": "Spanish translation of full_de", "explanation_es": "..."}');
   o.push('   {"type": "order", "instruction_es": "...", "translation_es": "...", "answers": ["the sentence", "other correct orders"], "full_de": "...", "full_es": "Spanish translation of full_de", "explanation_es": "..."}');
   o.push('   {"type": "translate", "instruction_es": "Traduce la frase al alemán.", "prompt_es": "Spanish sentence", "hint": "(...)", "answers": ["main German translation", "other correct translation"], "full_de": "main German translation", "full_es": "the Spanish sentence", "explanation_es": "..."}');
-  o.push('   {"type": "transform", "instruction_es": "...", "prompt_de": "...", "answers": ["..."], "full_de": "...", "full_es": "Spanish translation of full_de", "explanation_es": "..."}],');
+  o.push('   {"type": "transform", "instruction_es": "Transforma la frase.", "task_es": "the concrete change to make, in Spanish, e.g. Ponla en Perfekt. / Une las dos frases con weil. / Sustituye el sustantivo por un pronombre. / Conviértela en pregunta directa. (describe the operation, never the resulting words)", "prompt_de": "...", "answers": ["..."], "full_de": "...", "full_es": "Spanish translation of full_de", "explanation_es": "..."}],');
   o.push(' "error_es": null}');
   return o.join('\n');
 }
@@ -1466,7 +1473,7 @@ function exLine(it,i){
   if(t==='choice') return i+'. [choice] '+it.prompt+'  | options: '+it.options.join(' / ')+' | marked correct: '+it.options[it.answer];
   if(t==='order') return i+'. [order] correct sentence: '+it.answers[0];
   if(t==='translate') return i+'. [translate] Spanish: '+it.prompt+'  | accepted German: '+it.answers.join(' / ');
-  return i+'. [transform] '+it.prompt+' | accepted: '+it.answers.join(' / ');
+  return i+'. [transform] '+it.prompt+' | task: '+(it.task||'')+' | accepted: '+it.answers.join(' / ');
 }
 /* Second, independent check by a strict teacher: drops exercises whose answer is wrong or ambiguous. If the check fails for any reason, nothing is dropped. */
 async function exVerify(items){
@@ -1580,7 +1587,7 @@ async function exAppeal(it){
            : 'Original sentence: '+it.prompt;
   var given = it.type==='gap' ? '"'+it.given+'" (full sentence: "'+it.prompt.replace('___', it.given)+'")' : '"'+it.given+'"';
   var prompt=['A Spanish speaker learning German did this grammar exercise.',
-    'Instruction: '+it.ins, task,
+    'Instruction: '+it.ins+(it.task?' — '+it.task:''), task,
     'Expected answer: "'+expected+'"',
     "Learner's answer: "+given,
     "Is the learner's answer also correct, natural German that does exactly what the instruction asks? Ignore the capital letter at the start and final punctuation.",
@@ -1803,6 +1810,7 @@ function renderRun(){
     }
   } else if(it.type==='transform'||it.type==='translate'){
     var src=h('div','src',it.prompt); src.lang=it.type==='translate'?'es':'de'; card.append(src);
+    if(it.type==='transform' && it.task) card.append(h('div','task-do','➜ '+it.task));
     if(it.type==='translate' && it.hint) card.append(h('div','hint-de',it.hint));
     if(!it.state){
       var ta=h('textarea','ans-input'); ta.id='exAns'; ta.rows=2; ta.lang='de'; ta.spellcheck=false;
