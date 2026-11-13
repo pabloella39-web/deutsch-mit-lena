@@ -94,3 +94,6 @@ En **Ejercicios** hay un bloque «De clase» con 16 temas de tus apuntes: prepos
 - **Repaso total**: 10 ejercicios al azar con TODO lo de clase (todos los temas, las frases de tus hojas, tus palabras y lo que cuentes en «Lo que dimos en clase»). Cada tanda mezcla áreas distintas y no repite frases recientes. También está como «Todo mezclado al azar» en Ejercicios. La sesión diaria y los 5 minutos usan la misma mezcla.
 - **Vocabulario que avanza**: las tarjetas pasan de reconocer (alemán→español) a producir (español→alemán) y, en las más aprendidas, a escribir la palabra. Cuando te quedan pocas palabras sin ver, la app añade 10 nuevas de un nivel algo más alto, con temas que rotan.
 - **Ejercicios que suben**: si aciertas un tema por encima del 85 %, la siguiente vez es algo más difícil; si fallas mucho, más fácil. Tu nivel sube poco a poco con tus aciertos.
+
+## Clase del 13 de noviembre (v22)
+Añadidos: gern/mögen/gefallen/schmecken, preposición + artículo (Akk o Dat), TeKaMoLo, wenn/ob y da(r)- + ob/dass, la lista ampliada de verbos con dativo, 34 palabras nuevas y 52 frases de tus hojas. Todo entra en el Repaso total.
