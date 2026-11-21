@@ -2731,23 +2731,35 @@ function shrinkImg(file){
 var photoBusy=false;
 async function photoNotes(fileList, btn){
   if(photoBusy) return;
-  var files=Array.prototype.slice.call(fileList,0,6);
+  var files=Array.prototype.slice.call(fileList,0,20);
   if(!getKey()){ showSheet('sh-settings'); return; }
   photoBusy=true; btn.disabled=true; var old=btn.textContent; btn.textContent='Leyendo tus apuntes…';
   try{
-    var blocks=[];
-    for(var i=0;i<files.length;i++){ blocks.push({type:'image', source:{type:'base64', media_type:'image/jpeg', data:await shrinkImg(files[i])}}); }
-    blocks.push({type:'text', text:'These photos are pages from the notebook, worksheets or handouts of a Spanish-speaking student of German (level A2-B1) from their German class. The text may be handwritten (also the teacher\'s red pen), in German and Spanish. Read EVERYTHING carefully, then return ONLY this JSON: {"summary_es":"2 or 3 sentences in Spanish saying what the pages cover","topics":[{"t":"short Spanish title of a grammar point or theme on the pages","spec":"English description for an exercise writer: the rule, the forms and the example sentences shown on the pages, 40 to 120 words"}],"cards":[{"de":"German word or phrase (nouns with article; verbs with their preposition or case if shown)","es":"short Spanish meaning","ex":"a German example sentence, preferably one from the pages","exEs":"Spanish translation of the example"}],"sentences":[{"de":"a complete German sentence from the pages (fix an obvious slip)","es":"Spanish translation"}],"unreadable_es":"empty string, or a short note about illegible parts"}. RULES: use only what is on the pages (you may add the missing Spanish meaning of a word); never invent content; at most 4 topics, 25 cards and 20 sentences; skip blanks you cannot complete; no parentheses inside "ex"; all German must be correct.'});
-    var j=await aiJSON(blocks, 4500);
+    var PT='These photos are pages from the notebook, worksheets or handouts of a Spanish-speaking student of German (level A2-B1) from their German class. The text may be handwritten (also the teacher\'s red pen), in German and Spanish. Read EVERYTHING carefully, then return ONLY this JSON: {"summary_es":"2 or 3 sentences in Spanish saying what the pages cover","topics":[{"t":"short Spanish title of a grammar point or theme on the pages","spec":"English description for an exercise writer: the rule, the forms and the example sentences shown on the pages, 40 to 120 words"}],"cards":[{"de":"German word or phrase (nouns with article; verbs with their preposition or case if shown)","es":"short Spanish meaning","ex":"a German example sentence, preferably one from the pages","exEs":"Spanish translation of the example"}],"sentences":[{"de":"a complete German sentence from the pages (fix an obvious slip)","es":"Spanish translation"}],"unreadable_es":"empty string, or a short note about illegible parts"}. RULES: use only what is on the pages (you may add the missing Spanish meaning of a word); never invent content; at most 4 topics, 25 cards and 20 sentences; skip blanks you cannot complete; no parentheses inside "ex"; all German must be correct.';
+    var j={summary_es:'', topics:[], cards:[], sentences:[], unreadable_es:''}, fails=0, sums=[];
+    for(var g=0; g<files.length; g+=4){
+      btn.textContent='Leyendo tus apuntes… ('+Math.min(g+4,files.length)+' de '+files.length+')';
+      var blocks=[];
+      for(var i=g;i<Math.min(g+4,files.length);i++){ blocks.push({type:'image', source:{type:'base64', media_type:'image/jpeg', data:await shrinkImg(files[i])}}); }
+      blocks.push({type:'text', text:PT});
+      try{
+        var jj=await aiJSON(blocks, 4500);
+        if(jj.summary_es) sums.push(String(jj.summary_es));
+        ['topics','cards','sentences'].forEach(function(k){ if(Array.isArray(jj[k])) j[k]=j[k].concat(jj[k]); });
+        if(jj.unreadable_es) j.unreadable_es=(j.unreadable_es+' '+jj.unreadable_es).trim();
+      }catch(e2){ fails++; if(fails>=Math.ceil(files.length/4)) throw e2; }
+    }
+    j.summary_es=sums.join(' ').slice(0,500);
+    if(fails) j.unreadable_es=(j.unreadable_es+' Algún grupo de fotos no se pudo leer; vuelve a subirlas.').trim();
     var n=0, ns=0, got=[];
-    (Array.isArray(j.cards)?j.cards:[]).slice(0,25).forEach(function(c){ if(!c||!c.de||!c.es||findWord(c.de)) return; V.words.push({de:String(c.de).trim().slice(0,80), es:String(c.es).trim().slice(0,100), ex:String(c.ex||'').trim().slice(0,200), exEs:String(c.exEs||'').trim().slice(0,200), uses:0, at:-500, cls:1, rev:0}); got.push(String(c.de).trim()); n++; });
+    (Array.isArray(j.cards)?j.cards:[]).slice(0,100).forEach(function(c){ if(!c||!c.de||!c.es||findWord(c.de)) return; V.words.push({de:String(c.de).trim().slice(0,80), es:String(c.es).trim().slice(0,100), ex:String(c.ex||'').trim().slice(0,200), exEs:String(c.exEs||'').trim().slice(0,200), uses:0, at:-500, cls:1, rev:0}); got.push(String(c.de).trim()); n++; });
     P.mySent=P.mySent||[];
-    (Array.isArray(j.sentences)?j.sentences:[]).slice(0,20).forEach(function(c){ if(!c||typeof c.de!=='string'||c.de.trim().length<8) return; var d=c.de.trim().slice(0,220); if(P.mySent.some(function(x){ return x.de===d; })) return; P.mySent.push({de:d, es:String(c.es||'').trim().slice(0,220)}); ns++; });
-    P.mySent=P.mySent.slice(-120);
+    (Array.isArray(j.sentences)?j.sentences:[]).slice(0,80).forEach(function(c){ if(!c||typeof c.de!=='string'||c.de.trim().length<8) return; var d=c.de.trim().slice(0,220); if(P.mySent.some(function(x){ return x.de===d; })) return; P.mySent.push({de:d, es:String(c.es||'').trim().slice(0,220)}); ns++; });
+    P.mySent=P.mySent.slice(-200);
     P.myTopics=P.myTopics||[]; var tt=[], spec=[];
-    (Array.isArray(j.topics)?j.topics:[]).slice(0,4).forEach(function(t){ if(!t||!t.t||!t.spec) return; var tn=String(t.t).trim().slice(0,70), sp=String(t.spec).trim().slice(0,800); spec.push(tn+': '+sp); tt.push(tn);
+    (Array.isArray(j.topics)?j.topics:[]).slice(0,10).forEach(function(t){ if(!t||!t.t||!t.spec) return; var tn=String(t.t).trim().slice(0,70), sp=String(t.spec).trim().slice(0,800); spec.push(tn+': '+sp); tt.push(tn);
       var ex=P.myTopics.filter(function(x){ return x.t===tn; })[0]; if(ex) ex.spec=sp; else P.myTopics.push({t:tn, spec:sp}); });
-    P.myTopics=P.myTopics.slice(-30);
+    P.myTopics=P.myTopics.slice(-40);
     var sum=String(j.summary_es||'').trim();
     if(sum){ P.classAll=(P.classAll||[]).concat([sum.slice(0,300)]).slice(-30); P.classNotes=sum.slice(0,600); }
     save('profile','vocab'); renderHeader(); pushMeta();

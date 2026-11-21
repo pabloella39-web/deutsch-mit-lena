@@ -100,4 +100,4 @@ Añadidos: gern/mögen/gefallen/schmecken, preposición + artículo (Akk o Dat),
 
 
 ## v24 – Fotos de apuntes
-En la pestaña «Hoy», en «Lo que dimos en clase», pulsa «📷 Subir fotos de los apuntes» (hasta 6 fotos: cámara o galería). Claude lee las páginas y añade a tu app los temas, las tarjetas de vocabulario y las frases, que entran en el repaso aleatorio. Muestra lo añadido y puedes hacer ejercicios de eso al momento. Las fotos solo se envían a Claude con tu clave; no se guardan.
+En la pestaña «Hoy», en «Lo que dimos en clase», pulsa «📷 Subir fotos de los apuntes» (hasta 20 de una vez; en la galería marca varias a la vez). Claude lee las páginas y añade a tu app los temas, las tarjetas de vocabulario y las frases, que entran en el repaso aleatorio. Muestra lo añadido y puedes hacer ejercicios de eso al momento. Las fotos solo se envían a Claude con tu clave; no se guardan.
