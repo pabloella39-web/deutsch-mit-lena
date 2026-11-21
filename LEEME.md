@@ -101,3 +101,6 @@ Añadidos: gern/mögen/gefallen/schmecken, preposición + artículo (Akk o Dat),
 
 ## v24 – Fotos de apuntes
 En la pestaña «Hoy», en «Lo que dimos en clase», pulsa «📷 Subir fotos de los apuntes» (hasta 20 de una vez; en la galería marca varias a la vez). Claude lee las páginas y añade a tu app los temas, las tarjetas de vocabulario y las frases, que entran en el repaso aleatorio. Muestra lo añadido y puedes hacer ejercicios de eso al momento. Las fotos solo se envían a Claude con tu clave; no se guardan.
+
+## v26 – Pestaña «Libro» (Schritte international)
+Nueva pestaña «Libro»: eliges el PDF del libro en tu tablet (queda guardado solo en la app, no va dentro de la APK ni se sube a ningún sitio). Pasas las páginas, pulsas «Detectar ejercicios» y Claude (modelo Sonnet) pone sobre la propia página huecos para escribir, botones para marcar opciones y casillas para números o letras. Contestas encima y pulsas «Corregir»: ✓ verde, ✕ rojo y la solución escrita bajo el hueco, con una explicación corta. Las respuestas se guardan por página. Usa tu clave de Claude (una página cuesta unos céntimos). El libro no trae soluciones: Claude resuelve cada ejercicio y, en los de audio, si no está seguro no corrige.

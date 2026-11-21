@@ -14,6 +14,10 @@ import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.content.ClipData;
 import android.provider.MediaStore;
+import android.graphics.Bitmap;
+import android.graphics.pdf.PdfRenderer;
+import android.os.ParcelFileDescriptor;
+import android.util.Base64;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import androidx.core.content.FileProvider;
@@ -27,6 +31,7 @@ import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -52,6 +57,10 @@ public class MainActivity extends Activity {
 
     private static final int REQ_SPEECH = 4242;
     private static final int REQ_FILES = 4243;
+    private static final int REQ_BOOK = 4244;
+    private PdfRenderer bookRenderer;
+    private ParcelFileDescriptor bookFd;
+    private final Object bookLock = new Object();
     private ValueCallback<Uri[]> fileCb;
     private Uri camUri;
     private static final String API_HOST_PREFIX = "https://api.anthropic.com/";
@@ -216,6 +225,30 @@ public class MainActivity extends Activity {
         js("window.__ttsDone && window.__ttsDone(" + JSONObject.quote(id == null ? "" : id) + ")");
     }
 
+    private void closeBook() {
+        synchronized (bookLock) {
+            try { if (bookRenderer != null) bookRenderer.close(); } catch (Exception e) { }
+            try { if (bookFd != null) bookFd.close(); } catch (Exception e) { }
+            bookRenderer = null; bookFd = null;
+        }
+    }
+
+    private int openBook() {
+        synchronized (bookLock) {
+            if (bookRenderer != null) return bookRenderer.getPageCount();
+            File f = new File(getFilesDir(), "book.pdf");
+            if (!f.exists()) return 0;
+            try {
+                bookFd = ParcelFileDescriptor.open(f, ParcelFileDescriptor.MODE_READ_ONLY);
+                bookRenderer = new PdfRenderer(bookFd);
+                return bookRenderer.getPageCount();
+            } catch (Exception e) {
+                closeBook();
+                return -1;
+            }
+        }
+    }
+
     private void js(final String code) {
         runOnUiThread(() -> {
             if (web != null) web.evaluateJavascript(code, null);
@@ -246,6 +279,25 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQ_BOOK) {
+            final Uri u = (resultCode == RESULT_OK && data != null) ? data.getData() : null;
+            if (u == null) { js("window.__bookReady && window.__bookReady(0)"); return; }
+            pool.execute(() -> {
+                try {
+                    File f = new File(getFilesDir(), "book.pdf");
+                    try (InputStream in = getContentResolver().openInputStream(u); OutputStream out = new FileOutputStream(f)) {
+                        byte[] buf = new byte[65536]; int n;
+                        while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                    }
+                    closeBook();
+                    int pages = openBook();
+                    js("window.__bookReady && window.__bookReady(" + pages + ")");
+                } catch (Exception e) {
+                    js("window.__bookReady && window.__bookReady(-1)");
+                }
+            });
+            return;
+        }
         if (requestCode == REQ_FILES) {
             Uri[] out = null;
             if (resultCode == RESULT_OK) {
@@ -324,6 +376,51 @@ public class MainActivity extends Activity {
 
     /** Methods callable from the page as window.Android.* */
     public class Bridge {
+        @JavascriptInterface
+        public int bookInfo() { return openBook(); }
+
+        @JavascriptInterface
+        public void pickBook() {
+            runOnUiThread(() -> {
+                Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                i.addCategory(Intent.CATEGORY_OPENABLE);
+                i.setType("application/pdf");
+                try { startActivityForResult(i, REQ_BOOK); }
+                catch (Exception e) { js("window.__bookReady && window.__bookReady(-2)"); }
+            });
+        }
+
+        @JavascriptInterface
+        public void removeBook() {
+            pool.execute(() -> { closeBook(); new File(getFilesDir(), "book.pdf").delete(); });
+        }
+
+        /* Renders page n (0-based) as a JPEG with the given width and sends it back to the page. */
+        @JavascriptInterface
+        public void bookPage(final int n, final int width, final String id) {
+            pool.execute(() -> {
+                String b64 = "";
+                try {
+                    if (openBook() > 0) {
+                        synchronized (bookLock) {
+                            PdfRenderer.Page pg = bookRenderer.openPage(n);
+                            int w = Math.max(300, Math.min(2000, width));
+                            int h = Math.round(w * (float) pg.getHeight() / pg.getWidth());
+                            Bitmap bm = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+                            bm.eraseColor(Color.WHITE);
+                            pg.render(bm, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);
+                            pg.close();
+                            ByteArrayOutputStream bo = new ByteArrayOutputStream();
+                            bm.compress(Bitmap.CompressFormat.JPEG, 82, bo);
+                            bm.recycle();
+                            b64 = Base64.encodeToString(bo.toByteArray(), Base64.NO_WRAP);
+                        }
+                    }
+                } catch (Throwable e) { b64 = ""; }
+                js("window.__bookPage && window.__bookPage(" + JSONObject.quote(id) + "," + JSONObject.quote(b64) + ")");
+            });
+        }
+
         @JavascriptInterface
         public String load(String key) {
             return prefs.getString(key, null);

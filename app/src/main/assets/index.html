@@ -290,7 +290,7 @@ a{color:var(--blue-ink)}
 .q-clear{align-self:center}
 
 /* Mode tabs: conversation | grammar exercises */
-.tabs{flex:none;display:grid;grid-template-columns:repeat(5,1fr);gap:2px;padding:6px 4px 8px;background:var(--sheet);border-bottom:1px solid var(--line)}
+.tabs{flex:none;display:grid;grid-template-columns:repeat(6,1fr);gap:2px;padding:6px 4px 8px;background:var(--sheet);border-bottom:1px solid var(--line)}
 .tabs button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 2px;border-radius:10px;border:1px solid transparent;background:none;font-weight:700;font-size:.72rem;white-space:nowrap;min-width:0;color:var(--muted);cursor:pointer}
 .tabs button svg{flex:none}
 @media (max-width:520px){.tabs button{font-size:.63rem}}
@@ -428,6 +428,28 @@ textarea.ans-input{resize:none}
 .prow.done .pn{background:var(--ok-soft);color:var(--ok)}
 .prow.cur{border-color:var(--blue-ink);box-shadow:0 0 0 1px var(--blue-ink)}
 .prow .pt{min-width:0;overflow-wrap:anywhere}
+.bk-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 10px}
+.bk-bar .btn{padding:8px 14px}
+.bk-sp{flex:1}
+.bk-of{color:var(--muted);font-size:.85rem}
+.bk-pgn{width:70px;font:inherit;padding:8px;border-radius:10px;border:1px solid var(--line);background:var(--sheet);color:var(--ink);text-align:center}
+.bk-msg{margin:0 0 10px}
+.bk-scroll{overflow:auto;border:1px solid var(--line);border-radius:8px;background:#fff;-webkit-overflow-scrolling:touch}
+.bk-page{position:relative;min-height:120px}
+.bk-page img{display:block;width:100%;height:auto;max-width:none;-webkit-user-select:none;user-select:none}
+.bk-load{padding:40px 16px;text-align:center;color:#555}
+.bk-ov{position:absolute;top:0;left:0;right:0;bottom:0}
+.bk-f{position:absolute;margin:0;padding:0 3px;font-family:var(--f-hand);color:#0b2a8a;background:rgba(43,63,180,.07);border:0;border-bottom:2px solid var(--blue);border-radius:3px;outline:0;line-height:1.05}
+.bk-f:focus{background:rgba(43,63,180,.16)}
+.bk-f.bk-num{text-align:center}
+.bk-f.bk-area{border:2px solid var(--blue);resize:none;line-height:1.25}
+.bk-f.bk-mark{border:2px solid var(--blue);border-radius:4px;background:rgba(43,63,180,.06);cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:800;line-height:1}
+.bk-f.bk-mark.sel{background:rgba(43,63,180,.32)}
+.bk-f.ok{border-color:var(--ok);background:rgba(42,117,72,.2)}
+.bk-f.bad{border-color:var(--red);background:rgba(191,45,39,.18)}
+.bk-f.miss{border:2px dashed var(--ok);background:rgba(42,117,72,.12)}
+.bk-fix{position:absolute;z-index:2;max-width:55%;padding:0 4px;border-radius:3px;background:rgba(255,255,255,.94);color:#a3140f;font-family:var(--f-hand);font-size:13px;line-height:1.15;box-shadow:0 0 0 1px rgba(191,45,39,.35)}
+
 </style>
 </head>
 <body>
@@ -456,6 +478,7 @@ textarea.ans-input{resize:none}
     <button type="button" role="tab" id="tab-ex" aria-selected="false" aria-controls="exView"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Ejercicios</button>
     <button type="button" role="tab" id="tab-q" aria-selected="false" aria-controls="qView"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>Consultas</button>
     <button type="button" role="tab" id="tab-w" aria-selected="false" aria-controls="wView"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>Escribir</button>
+    <button type="button" role="tab" id="tab-b" aria-selected="false" aria-controls="bView"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5M9 7h6M9 11h6"/></svg>Libro</button>
   </nav>
 
   <div class="topicbar" id="topicbar" hidden>
@@ -534,6 +557,7 @@ textarea.ans-input{resize:none}
   <footer class="exbar" id="exBar" hidden></footer>
   <main class="exview" id="qView" hidden></main>
   <main class="exview" id="wView" hidden></main>
+  <main class="exview" id="bView" hidden></main>
   <main class="exview" id="rView" hidden></main>
 </div>
 
@@ -748,11 +772,11 @@ async function claudeText(prompt, opts, keyOverride){
   var key=keyOverride||getKey();
   if(!key) throw {code:'no_key'};
   opts=opts||{};
-  var model=getModel();
+  var model=opts.model||getModel();
   for(var attempt=0; attempt<2; attempt++){
     var body={model:model, max_tokens:opts.maxTokens||1200, system:opts.system||SYSTEM, messages:[{role:'user', content:prompt}]};
     /* Claude 5.x models think by default and thinking tokens eat into max_tokens (slow + truncated JSON). Ask for the least thinking. */
-    if(kvGet('lena.noFast')!=='1'){ body.output_config={effort:'low'}; if(/haiku/i.test(model)) body.thinking={type:'disabled'}; }
+    if(kvGet('lena.noFast')!=='1'){ body.output_config={effort:opts.effort||'low'}; if(/haiku/i.test(model)) body.thinking={type:'disabled'}; }
     var res=await rawReq('POST','messages',body, key);
     if(res.status===400 && body.output_config && /thinking|effort|output_config/i.test(res.text)){
       kvSet('lena.noFast','1'); delete body.output_config; delete body.thinking;
@@ -765,6 +789,7 @@ async function claudeText(prompt, opts, keyOverride){
       return {text:txt, stop:data.stop_reason};
     }
     var err=classify(res.status, res.text);
+    if(err.code==='model' && attempt===0 && opts.model && model===opts.model && getModel()!==opts.model){ model=getModel(); continue; }
     if(err.code==='model' && attempt===0){
       var nm=await newestModel(key);
       if(nm && nm!==model){ model=nm; kvSet('lena.claudeModel', nm); continue; }
@@ -1442,15 +1467,15 @@ function exPrompt(q, part){
 
 /* ---------- Exercises: flow ---------- */
 function setMode(m){
-  mode = (m==='ex'||m==='q'||m==='w'||m==='r') ? m : 'chat'; kvSet('lena.mode', mode);
-  var ids={chat:'tab-chat', r:'tab-r', ex:'tab-ex', q:'tab-q', w:'tab-w'};
+  mode = (m==='ex'||m==='q'||m==='w'||m==='r'||m==='b') ? m : 'chat'; kvSet('lena.mode', mode);
+  var ids={chat:'tab-chat', r:'tab-r', ex:'tab-ex', q:'tab-q', w:'tab-w', b:'tab-b'};
   Object.keys(ids).forEach(function(k){ $(ids[k]).setAttribute('aria-selected', String(k===mode)); });
   var ch=mode==='chat';
-  $('chat').hidden=!ch; $('composer').hidden=!ch; $('exView').hidden=mode!=='ex'; $('qView').hidden=mode!=='q'; $('wView').hidden=mode!=='w'; $('rView').hidden=mode!=='r';
+  $('chat').hidden=!ch; $('composer').hidden=!ch; $('exView').hidden=mode!=='ex'; $('qView').hidden=mode!=='q'; $('wView').hidden=mode!=='w'; $('rView').hidden=mode!=='r'; $('bView').hidden=mode!=='b';
   renderChat();
   if(ch){ $('exBar').hidden=true; scrollDown(true); return; }
   stopSpeaking();
-  if(mode==='ex') renderEx(); else { $('exBar').hidden=true; if(mode==='q') renderQ(); else if(mode==='r') renderR(); else renderW(); }
+  if(mode==='ex') renderEx(); else { $('exBar').hidden=true; if(mode==='q') renderQ(); else if(mode==='r') renderR(); else if(mode==='b') renderBook(); else renderW(); }
 }
 async function exBatch(req, part){
   var last=null;
@@ -1891,6 +1916,7 @@ $('tab-r').addEventListener('click',function(){ R.stage = R.stage==='review'?'re
 $('tab-ex').addEventListener('click',function(){ setMode('ex'); });
 $('tab-q').addEventListener('click',function(){ setMode('q'); });
 $('tab-w').addEventListener('click',function(){ setMode('w'); });
+$('tab-b').addEventListener('click',function(){ setMode('b'); });
 $('form').addEventListener('submit',function(e){ e.preventDefault(); send(); });
 $('input').addEventListener('input',function(){ autoGrow(); updateComposer(); });
 $('input').addEventListener('keydown',function(e){ if(e.key==='Enter' && !e.shiftKey && !e.isComposing && !NATIVE){ e.preventDefault(); send(); } });
@@ -2852,6 +2878,246 @@ CLASS_TOPICS.push(
  {t:'Orden de los complementos: TeKaMoLo', spec:'Word order of adverbials: Temporal (when), Kausal (why), Modal (how), Lokal (where): Ich fahre heute wegen des Regens mit dem Bus nach Hause. Objects: dative before accusative for nouns, accusative pronoun before dative pronoun (Ich gebe es ihm). Use "order" exercises mostly, plus transform and translate.'},
  {t:'wenn, ob y da(r)- + ob/dass', spec:'wenn (if / when, condition) vs ob (whether, indirect yes/no question) vs oder (or); verb at the end of the subordinate clause. da(r)- announcing an ob or dass clause: Es hängt davon ab, ob wir morgen grillen können; Ob wir morgen grillen können, hängt vom Wetter ab; Ich freue mich darauf, dass du kommst; Ich warte darauf, dass du anrufst. sich freuen auf (future) vs über (present or past). Es geht um + Akk (Worum geht es?). Gaps for wenn/ob/davon/darauf/darüber, choice, transform (join with ob or dass), translate.'}
 );
+/* ---------- Libro: PDF del curso con campos para contestar y corrección sobre la propia página ---------- */
+var BOOK_MODEL_DEFAULT='claude-sonnet-5-5';
+function bookModel(){ return (kvGet('lena.bookModel')||'').trim() || BOOK_MODEL_DEFAULT; }
+var B={ask:'', pages:0, pg:1, zoom:1, img:'', imgPg:0, busy:'', msg:'', store:{}, loading:false, ar:1.4};
+var bseq=0, bpend={}, bimgSeq=0;
+function bookNative(){ return NATIVE && window.Android && typeof window.Android.bookInfo==='function'; }
+function bookLoad(){
+  var s=readJSON('lena.book'); if(s && typeof s==='object'){ B.store=(s.p&&typeof s.p==='object')?s.p:{}; B.pg=Math.max(1,Number(s.last)||1); }
+  try{ B.pages = bookNative() ? Number(window.Android.bookInfo())||0 : (Number(window.__bookTestPages)||0); }catch(e){ B.pages=0; }
+  if(B.pages>0) B.pg=Math.min(B.pg,B.pages);
+}
+function bookSave(){ kvSet('lena.book', JSON.stringify({last:B.pg, p:B.store})); }
+window.__bookReady=function(n){
+  B.busy=''; 
+  if(n>0){ B.pages=n; B.pg=1; B.img=''; B.imgPg=0; B.msg='Libro cargado: '+n+' páginas.'; }
+  else if(n===0) B.msg='';
+  else B.msg='No se pudo abrir ese PDF. Prueba con otro archivo.';
+  if(mode==='b') renderBook();
+};
+window.__bookPage=function(id,b64){ var f=bpend[id]; if(f){ delete bpend[id]; f(b64); } };
+function bookRender(n,width){
+  return new Promise(function(res){
+    if(bookNative()){ var id='p'+(++bseq); bpend[id]=res; try{ window.Android.bookPage(n-1,width,id); }catch(e){ delete bpend[id]; res(''); } }
+    else if(typeof window.__bookTestRender==='function'){ Promise.resolve(window.__bookTestRender(n,width)).then(res, function(){ res(''); }); }
+    else res('');
+  });
+}
+function bookPick(){ if(bookNative()){ B.busy='pick'; try{ window.Android.pickBook(); }catch(e){ B.busy=''; } renderBook(); } }
+function bookRemove(){ try{ if(bookNative()) window.Android.removeBook(); }catch(e){} B.pages=0; B.img=''; B.imgPg=0; renderBook(); }
+function bookGo(n){
+  n=Math.round(Number(n)); if(!isFinite(n)) return; n=Math.max(1,Math.min(B.pages,n));
+  B.pg=n; B.msg=''; B.ask=''; bookSave(); B.img=''; B.imgPg=0; renderBook(); var v=$('bView'); if(v) v.scrollTop=0;
+}
+function bookPageState(){ var k=String(B.pg); if(!B.store[k]) B.store[k]={ex:[], f:[], a:{}, r:null}; return B.store[k]; }
+/* page picture for the model: long edge 1568 px, optionally with a labelled red grid every 10 % so it can place boxes accurately */
+function modelImage(dataUrl, grid){
+  return new Promise(function(res,rej){
+    var im=new Image();
+    im.onload=function(){
+      var k=Math.min(1,1568/Math.max(im.naturalWidth,im.naturalHeight)), w=Math.round(im.naturalWidth*k), hh=Math.round(im.naturalHeight*k);
+      var c=document.createElement('canvas'); c.width=w; c.height=hh; var g=c.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0,0,w,hh); g.drawImage(im,0,0,w,hh);
+      if(grid){
+        g.lineWidth=1; g.font='bold 15px sans-serif';
+        for(var i=1;i<10;i++){
+          var x=Math.round(w*i/10), y=Math.round(hh*i/10), t='0.'+i;
+          g.strokeStyle='rgba(220,0,0,0.30)'; g.beginPath(); g.moveTo(x,0); g.lineTo(x,hh); g.moveTo(0,y); g.lineTo(w,y); g.stroke();
+          g.fillStyle='rgba(255,255,255,0.85)'; g.fillRect(x+1,1,30,17); g.fillRect(1,y+1,30,17);
+          g.fillStyle='#d40000'; g.fillText(t,x+3,15); g.fillText(t,3,y+15);
+        }
+      }
+      res(c.toDataURL('image/jpeg',0.85).split(',')[1]);
+    };
+    im.onerror=function(){ rej(new Error('img')); };
+    im.src=dataUrl;
+  });
+}
+function clamp01(v){ v=Number(v); if(!isFinite(v)) return null; return Math.max(0,Math.min(1,v)); }
+function normalizeBook(j){
+  var out={ex:[], f:[]}, seen={};
+  (Array.isArray(j&&j.exercises)?j.exercises:[]).slice(0,40).forEach(function(e,ei){
+    if(!e||typeof e!=='object') return;
+    var eid='e'+(ei+1);
+    var ex={id:eid, num:String(e.num||'').slice(0,12), title:String(e.title_es||e.title||'').slice(0,160), multi:!!e.multi, audio:!!e.audio};
+    var n=0;
+    (Array.isArray(e.fields)?e.fields:[]).slice(0,60).forEach(function(f,fi){
+      if(!f||typeof f!=='object') return;
+      var t=String(f.t||'').toLowerCase(); if(['text','area','mark','num'].indexOf(t)<0) return;
+      var x=clamp01(f.x), y=clamp01(f.y), w=clamp01(f.w), hh=clamp01(f.h);
+      if(x==null||y==null||w==null||hh==null||w<=0||hh<=0) return;
+      if(x+w>1) w=1-x; if(y+hh>1) hh=1-y;
+      if(t==='mark'){ w=Math.max(w,0.018); hh=Math.max(hh,0.013); } else { w=Math.max(w,0.04); hh=Math.max(hh,0.016); }
+      var id=eid+'_'+(fi+1); if(seen[id]) return; seen[id]=1;
+      out.f.push({id:id, e:eid, t:t, x:x, y:y, w:w, h:hh, l:String(f.label||'').slice(0,80)}); n++;
+    });
+    if(n) out.ex.push(ex);
+  });
+  return out;
+}
+function bookModelCall(blocks, maxTokens, effort){
+  return claudeText(blocks, {maxTokens:maxTokens, model:bookModel(), effort:effort}).then(function(r){
+    var j=parseLoose(r.text); if(!j && r.stop==='max_tokens') j=repairJSON(r.text);
+    if(!j||typeof j!=='object'||Array.isArray(j)) throw {code: r.stop==='max_tokens'?'too_long':'invalid_json'};
+    return j;
+  });
+}
+async function bookDetect(){
+  if(B.busy) return;
+  if(!getKey()){ showSheet('sh-settings'); toast('Primero añade tu clave de Claude.'); return; }
+  var pg=B.pg; B.busy='detect'; B.msg='Buscando los ejercicios de esta página… (10–30 s)'; renderBook();
+  try{
+    var b64=await modelImage(B.img, true);
+    var prompt='This is page '+pg+' of a German textbook (Schritte international Neu, Kursbuch und Arbeitsbuch) scanned from paper. A RED GRID is drawn over the picture for measuring only: the labels 0.1 … 0.9 along the top edge are fractions of the page WIDTH and the labels along the left edge are fractions of the page HEIGHT. Ignore the grid itself when reading the page.\n'+
+    'Find every exercise on the page that a student answers on paper and describe where each answer goes. Return ONLY one JSON object:\n'+
+    '{"exercises":[{"num":"exercise label as printed, e.g. 3a or B2","title_es":"very short Spanish description of the task","multi":false,"audio":false,"fields":[{"t":"text|area|mark|num","x":0.0,"y":0.0,"w":0.0,"h":0.0,"label":"..."}]}]}\n'+
+    'FIELD TYPES: "text" = a blank or line for ONE short written answer (a word, a phrase, one line). "area" = a larger free-writing box or several lines for a longer text. "mark" = one printed option the student ticks, circles or crosses (checkbox, ○, a), b), c) option, richtig/falsch box); one field per option, "label" = the option text or letter (max 8 words). "num" = a small box or gap where the student writes a number or a letter (ordering, matching, numbering). For "text", "area" and "num" the label is the item number or the first words of the sentence it belongs to.\n'+
+    'GEOMETRY: x and y are the TOP-LEFT corner of the box as a fraction (0 to 1) of the page width and height; w and h are its width and height as fractions. For "text" fields the box covers the blank line or gap (height about 0.015 to 0.025); for "mark" the box covers the tick box or the whole short option (about 0.02 wide for a checkbox); for "num" the small box. Use the grid to measure carefully; boxes must sit exactly on the blanks printed in the book, not on text that is already printed.\n'+
+    'RULES: "multi" is true only if several options of the same exercise can be ticked. "audio" is true if the exercise needs a recording (CD, Track, Hörtext) to be answered. Skip exercises that have no place to write (only to discuss in class), vocabulary pictures without blanks, and anything already filled in. Reading order: top to bottom. At most 40 exercises and 60 fields per exercise. If the page has no exercises (cover, index, photo page), return {"exercises":[]}.';
+    var j=await bookModelCall([{type:'image', source:{type:'base64', media_type:'image/jpeg', data:b64}}, {type:'text', text:prompt}], 7000);
+    var nb=normalizeBook(j);
+    if(pg===B.pg || true){
+      var k=String(pg); B.store[k]={ex:nb.ex, f:nb.f, a:{}, r:null, det:true}; bookSave();
+    }
+    B.msg = nb.f.length ? 'Encontré '+nb.ex.length+' ejercicios y '+nb.f.length+' campos. Si alguno está un poco movido, igualmente puedes contestar.' : 'No encontré ejercicios para contestar en esta página.';
+  }catch(e){ B.msg = e&&e.code ? errCopy(e) : 'No pude analizar la página. Inténtalo otra vez.'; }
+  B.busy=''; if(mode==='b') renderBook();
+}
+function bookAnswered(st){
+  var n=0; st.f.forEach(function(f){ var a=st.a[f.id]; if(f.t==='mark'? a===1 : String(a||'').trim()) n++; }); return n;
+}
+async function bookCheck(){
+  if(B.busy) return;
+  var st=bookPageState();
+  if(!bookAnswered(st)){ toast('Contesta algún ejercicio antes de corregir.'); return; }
+  if(!getKey()){ showSheet('sh-settings'); toast('Primero añade tu clave de Claude.'); return; }
+  var pg=B.pg; B.busy='check'; B.msg='Corrigiendo tus respuestas… (10–30 s)'; renderBook();
+  try{
+    var b64=await modelImage(B.img, false);
+    var exs=[];
+    st.ex.forEach(function(e){
+      var fs=st.f.filter(function(f){ return f.e===e.id; });
+      if(!fs.some(function(f){ var a=st.a[f.id]; return f.t==='mark'? a===1 : String(a||'').trim(); })) return;
+      exs.push({id:e.id, num:e.num, task:e.title, multi:e.multi, audio:e.audio, fields:fs.map(function(f){ var a=st.a[f.id]; return f.t==='mark' ? {id:f.id, type:'mark', option:f.l, selected:a===1} : {id:f.id, type:f.t, item:f.l, answer:String(a||'')}; })});
+    });
+    var prompt='This is a page of the German textbook Schritte international Neu (level B1.1). A Spanish-speaking student answered some of its exercises; their answers are in the JSON below (field ids refer to blanks/options on this page). Do each exercise yourself from the page content, then judge the student\'s answers.\n'+
+    'EXERCISES AND ANSWERS:\n'+JSON.stringify(exs)+'\n\n'+
+    'RULES: For fields of type text, area or num: "ok" is true if the answer is correct (accept equally correct alternatives; ignore capital letter at the start, final punctuation and extra spaces; a missing umlaut written as ae/oe/ue or ss for ß is still ok), false if wrong; if the field is empty set "ok" to null. When "ok" is false give the correct answer in "fix" (for an "area" give the corrected text) and one short Spanish explanation in "note_es" (at most 20 words). For fields of type mark: set "should_select" to true or false (whether that option is correct and should be ticked). If an exercise needs audio you cannot hear (audio=true) and you cannot be sure, set "ok" to null for its fields and for marks set "should_select" to null. Never invent a correction you are not sure of: use null.\n'+
+    'Return ONLY: {"results":[{"id":"field id","ok":true,"fix":"","note_es":"","should_select":null}]} with one entry per field of the exercises above.';
+    var j=await bookModelCall([{type:'image', source:{type:'base64', media_type:'image/jpeg', data:b64}}, {type:'text', text:prompt}], 6000, 'medium');
+    var res={}; (Array.isArray(j.results)?j.results:[]).forEach(function(r){ if(r&&r.id) res[String(r.id)]=r; });
+    var out={}, ok=0, tot=0;
+    st.f.forEach(function(f){
+      var r=res[f.id], a=st.a[f.id]; if(!r) return;
+      if(f.t==='mark'){
+        if(r.should_select==null) return;
+        var sel=a===1, should=r.should_select===true;
+        if(sel&&should){ out[f.id]={s:'ok'}; ok++; tot++; }
+        else if(sel&&!should){ out[f.id]={s:'bad'}; tot++; }
+        else if(!sel&&should){ out[f.id]={s:'miss'}; tot++; }
+      } else {
+        if(!String(a||'').trim() || r.ok==null) return;
+        tot++;
+        if(r.ok===true){ out[f.id]={s:'ok'}; ok++; }
+        else out[f.id]={s:'bad', fix:String(r.fix||'').slice(0,160), note:String(r.note_es||'').slice(0,200)};
+      }
+    });
+    st.r={res:out, ok:ok, tot:tot, t:Date.now()}; bookSave();
+    if(tot){ updateStreak(); P.exDone=(P.exDone||0)+tot; P.exOk=(P.exOk||0)+ok; save('profile'); }
+    B.msg = tot ? 'Corregido: '+ok+' de '+tot+' bien.' : 'No pude corregir nada con seguridad en esta página.';
+  }catch(e){ B.msg = e&&e.code ? errCopy(e) : 'No pude corregir. Inténtalo otra vez.'; }
+  B.busy=''; if(mode==='b') renderBook();
+}
+function bookLayout(pageEl){
+  var H=pageEl.clientHeight, W=pageEl.clientWidth; if(!H||!W) return;
+  pageEl.querySelectorAll('[data-fid]').forEach(function(el){
+    var hpx=H*Number(el.dataset.fh); var fs=Math.max(9,Math.min(26,hpx*0.7)); el.style.fontSize=fs+'px';
+  });
+}
+function renderBook(){
+  if(mode!=='b') return;
+  var v=$('bView'); var w=h('div','exwrap');
+  var hd=h('div'); hd.append(h('h2','ex-h2','Libro'), h('p','ex-lead','Tu libro de Schritte: contesta sobre la propia página y la app te corrige encima.')); w.append(hd);
+  if(!bookNative() && !(typeof window.__bookTestRender==='function')){
+    w.append(h('div','tcard','Esta función solo está en la app instalada en el móvil o la tablet.')); v.replaceChildren(w); return;
+  }
+  if(B.pages<=0){
+    var c=h('div','tcard');
+    c.append(h('div','section-label','Carga tu libro'));
+    c.append(h('p',null,'Elige el PDF del libro en tu dispositivo. El libro se queda en tu tablet y no se sube a ningún sitio: solo se envía a Claude la página que analices o corrijas.'));
+    var pb=h('button','btn primary big', B.busy==='pick'?'Cargando…':'Elegir el PDF del libro'); pb.type='button'; pb.disabled=B.busy==='pick'; pb.addEventListener('click',bookPick); c.append(pb);
+    if(B.msg) c.append(h('p','note',B.msg));
+    w.append(c); v.replaceChildren(w); return;
+  }
+  var bar=h('div','bk-bar');
+  var pv=h('button','btn','‹'); pv.type='button'; pv.disabled=B.pg<=1; pv.addEventListener('click',function(){ bookGo(B.pg-1); });
+  var ip=h('input','bk-pgn'); ip.type='number'; ip.min=1; ip.max=B.pages; ip.value=B.pg; ip.setAttribute('inputmode','numeric'); ip.addEventListener('change',function(){ bookGo(ip.value); });
+  var nx=h('button','btn','›'); nx.type='button'; nx.disabled=B.pg>=B.pages; nx.addEventListener('click',function(){ bookGo(B.pg+1); });
+  var zo=h('button','btn','−'); zo.type='button'; zo.addEventListener('click',function(){ B.zoom=Math.max(1,B.zoom-0.5); renderBook(); });
+  var zi=h('button','btn','+'); zi.type='button'; zi.addEventListener('click',function(){ B.zoom=Math.min(3,B.zoom+0.5); renderBook(); });
+  bar.append(pv, ip, h('span','bk-of','de '+B.pages), nx, h('span','bk-sp'), zo, h('span','bk-of',Math.round(B.zoom*100)+' %'), zi);
+  w.append(bar);
+  var st=bookPageState(), has=st.f.length>0, busy=!!B.busy;
+  var act=h('div','bk-bar');
+  var db=h('button','btn'+(has?'':' primary'), B.busy==='detect'?'Buscando…':(B.ask==='det'?'¿Seguro? Borra tus respuestas':(has?'Volver a detectar':'🔍 Detectar ejercicios'))); db.type='button'; db.disabled=busy||!B.img; db.addEventListener('click',function(){ if(has && B.ask!=='det'){ B.ask='det'; renderBook(); return; } B.ask=''; bookDetect(); });
+  act.append(db);
+  if(has){
+    var cb=h('button','btn primary', B.busy==='check'?'Corrigiendo…':'✓ Corregir'); cb.type='button'; cb.disabled=busy; cb.addEventListener('click',bookCheck); act.append(cb);
+    var cl=h('button','btn','Borrar respuestas'); cl.type='button'; cl.disabled=busy; cl.addEventListener('click',function(){ st.a={}; st.r=null; bookSave(); B.msg=''; renderBook(); }); act.append(cl);
+  }
+  w.append(act);
+  if(B.msg) w.append(h('p','note bk-msg',B.msg));
+  if(st.r && st.r.tot){ var sc=h('div','score'); sc.append(h('b',null,st.r.ok+' / '+st.r.tot), h('span',null, st.r.ok===st.r.tot?'¡Todo correcto!':'Mira en rojo lo que falla; debajo de cada hueco está la solución.')); w.append(sc); }
+  var scroll=h('div','bk-scroll'); var page=h('div','bk-page'); page.style.width=(B.zoom*100)+'%'; scroll.append(page);
+  if(B.img && B.imgPg===B.pg){
+    var im=h('img'); im.alt='Página '+B.pg; im.draggable=false; page.append(im);
+    im.addEventListener('load',function(){ bookLayout(page); });
+    im.src=B.img;
+    var ov=h('div','bk-ov'); page.append(ov);
+    st.f.forEach(function(f){
+      var rs=st.r&&st.r.res&&st.r.res[f.id]; var cls='bk-f bk-'+f.t+(rs?' '+rs.s:'');
+      var el;
+      if(f.t==='mark'){
+        el=h('button',cls); el.type='button'; el.setAttribute('aria-pressed', String(st.a[f.id]===1)); el.setAttribute('aria-label', f.l||'opción');
+        if(st.a[f.id]===1){ el.classList.add('sel'); el.textContent='✕'; }
+        el.addEventListener('click',function(){
+          var on=st.a[f.id]===1; var ex=st.ex.filter(function(e){ return e.id===f.e; })[0];
+          if(!on && ex && !ex.multi) st.f.forEach(function(g){ if(g.e===f.e && g.t==='mark') delete st.a[g.id]; });
+          if(on) delete st.a[f.id]; else st.a[f.id]=1;
+          st.r=null; bookSave(); renderBook();
+        });
+      } else {
+        el = f.t==='area' ? h('textarea',cls) : h('input',cls);
+        if(f.t!=='area') el.type='text';
+        el.value=st.a[f.id]||''; el.setAttribute('autocomplete','off'); el.setAttribute('autocorrect','off'); el.setAttribute('autocapitalize','off'); el.setAttribute('spellcheck','false'); el.setAttribute('aria-label', f.l||'respuesta');
+        if(f.t==='num') el.maxLength=4;
+        el.addEventListener('input',function(){ st.a[f.id]=el.value; bookSave(); });
+      }
+      el.dataset.fid=f.id; el.dataset.fh=String(f.h);
+      el.style.left=(f.x*100)+'%'; el.style.top=(f.y*100)+'%'; el.style.width=(f.w*100)+'%'; el.style.height=(f.h*100)+'%';
+      ov.append(el);
+      if(rs && rs.fix){ var cp=h('div','bk-fix',rs.fix); cp.style.left=(f.x*100)+'%'; cp.style.top=((f.y+f.h)*100)+'%'; cp.dataset.fid='x'+f.id; cp.dataset.fh=String(f.h); ov.append(cp); }
+    });
+    setTimeout(function(){ bookLayout(page); },0);
+  } else {
+    page.append(h('div','bk-load', 'Cargando la página '+B.pg+'…'));
+    var mySeq=++bimgSeq, want=B.pg;
+    bookRender(want,1400).then(function(b){
+      if(mySeq!==bimgSeq||want!==B.pg) return;
+      if(!b){ B.msg='No pude mostrar esa página.'; B.img=''; renderBook(); return; }
+      B.img='data:image/jpeg;base64,'+b; B.imgPg=want; renderBook();
+    });
+  }
+  w.append(scroll);
+  if(st.r && st.r.res){
+    var notes=st.f.map(function(f){ var r=st.r.res[f.id]; return r&&r.note ? (f.l?f.l+': ':'')+r.note : ''; }).filter(Boolean);
+    if(notes.length){ var nc=h('div','tcard'); nc.append(h('div','section-label','Explicaciones')); notes.forEach(function(t){ nc.append(h('p','note',t)); }); w.append(nc); }
+  }
+  var rm=h('button','link', B.ask==='rm'?'¿Seguro? Pulsa otra vez para quitar el PDF':'Quitar el libro de la app'); rm.type='button'; rm.addEventListener('click',function(){ if(B.ask!=='rm'){ B.ask='rm'; renderBook(); return; } B.ask=''; bookRemove(); }); w.append(rm);
+  v.replaceChildren(w);
+}
+
 /* ---------- Start ---------- */
 if(NATIVE) $('micBtn').classList.add('native');
 loadAll();
@@ -2859,7 +3125,8 @@ exLoad();
 qLoad();
 tLoad();
 renderAll();
-setMode(['ex','q','w','r'].indexOf(kvGet('lena.mode'))>=0 ? kvGet('lena.mode') : 'chat');
+bookLoad();
+setMode(['ex','q','w','r','b'].indexOf(kvGet('lena.mode'))>=0 ? kvGet('lena.mode') : 'chat');
 if(NATIVE && !remGet()) { remSet(true,19,0); toast('Te avisaré cada día a las 19:00. Puedes cambiarlo en la pestaña Hoy.'); }
 pushMeta();
 window.__launch();
