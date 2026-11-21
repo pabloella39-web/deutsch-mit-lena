@@ -428,6 +428,10 @@ textarea.ans-input{resize:none}
 .prow.done .pn{background:var(--ok-soft);color:var(--ok)}
 .prow.cur{border-color:var(--blue-ink);box-shadow:0 0 0 1px var(--blue-ink)}
 .prow .pt{min-width:0;overflow-wrap:anywhere}
+.exview.bk-fs{position:fixed;top:0;left:0;right:0;bottom:0;z-index:15;padding:6px 8px 20px}
+.bk-fs .exwrap{max-width:none}
+.bk-tool{position:sticky;top:-6px;z-index:6;background:var(--paper);padding:6px 0 2px}
+.bk-lib{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
 .bk-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 10px}
 .bk-bar .btn{padding:8px 14px}
 .bk-sp{flex:1}
@@ -1194,6 +1198,7 @@ window.__onBack = function(){
   if(mode==='r'){ if(R.stage==='review'||R.stage==='done'||R.stage==='path'){ R.stage='home'; renderR(); return true; } setMode('chat'); return true; }
   if(mode==='q'){ setMode('chat'); return true; }
   if(mode==='w'){ setMode('chat'); return true; }
+  if(mode==='b'){ if(B.full){ bookFull(false); return true; } setMode('chat'); return true; }
   return false;
 };
 function renderProgress(){
@@ -2881,18 +2886,32 @@ CLASS_TOPICS.push(
 /* ---------- Libro: PDF del curso con campos para contestar y corrección sobre la propia página ---------- */
 var BOOK_MODEL_DEFAULT='claude-sonnet-5-5';
 function bookModel(){ return (kvGet('lena.bookModel')||'').trim() || BOOK_MODEL_DEFAULT; }
-var B={ask:'', pages:0, pg:1, zoom:1, img:'', imgPg:0, busy:'', msg:'', store:{}, loading:false, ar:1.4};
+var B={ask:'', lib:[], cur:'', pages:0, pg:1, zoom:1, full:false, img:'', imgPg:0, busy:'', msg:'', store:{}, pendingId:''};
 var bseq=0, bpend={}, bimgSeq=0;
 function bookNative(){ return NATIVE && window.Android && typeof window.Android.bookInfo==='function'; }
-function bookLoad(){
-  var s=readJSON('lena.book'); if(s && typeof s==='object'){ B.store=(s.p&&typeof s.p==='object')?s.p:{}; B.pg=Math.max(1,Number(s.last)||1); }
-  try{ B.pages = bookNative() ? Number(window.Android.bookInfo())||0 : (Number(window.__bookTestPages)||0); }catch(e){ B.pages=0; }
-  if(B.pages>0) B.pg=Math.min(B.pg,B.pages);
+function curBook(){ for(var i=0;i<B.lib.length;i++) if(B.lib[i].id===B.cur) return B.lib[i]; return null; }
+function bookLibSave(){ kvSet('lena.books', JSON.stringify({lib:B.lib, cur:B.cur})); }
+function bookSave(){ if(B.cur) kvSet('lena.bk.'+B.cur, JSON.stringify({last:B.pg, p:B.store})); }
+function bookStoreLoad(){
+  var s=B.cur ? readJSON('lena.bk.'+B.cur) : null;
+  B.store=(s&&s.p&&typeof s.p==='object')?s.p:{}; B.pg=Math.max(1,Number(s&&s.last)||1);
+  var e=curBook(); B.pages=e?e.pages:0; if(B.pages) B.pg=Math.min(B.pg,B.pages);
+  B.img=''; B.imgPg=0;
 }
-function bookSave(){ kvSet('lena.book', JSON.stringify({last:B.pg, p:B.store})); }
-window.__bookReady=function(n){
-  B.busy=''; 
-  if(n>0){ B.pages=n; B.pg=1; B.img=''; B.imgPg=0; B.msg='Libro cargado: '+n+' páginas.'; }
+function bookLoad(){
+  var s=readJSON('lena.books');
+  if(s && Array.isArray(s.lib)){ B.lib=s.lib.filter(function(x){ return x&&x.id&&x.pages>0; }); B.cur=String(s.cur||''); }
+  if(!B.lib.length){ /* version 26 kept a single book: move it into the library */
+    var n=0; try{ n = bookNative() ? Number(window.Android.bookInfo('b0'))||0 : (Number(window.__bookTestPages)||0); }catch(e){}
+    if(n>0){ var old=readJSON('lena.book'); B.lib=[{id:'b0', name:'Schritte international 5', pages:n}]; B.cur='b0'; if(old&&old.p) kvSet('lena.bk.b0', JSON.stringify(old)); kvSet('lena.book',''); bookLibSave(); }
+  }
+  if(!curBook() && B.lib.length) B.cur=B.lib[0].id;
+  bookStoreLoad();
+}
+function bookName(n){ n=String(n||'Libro').replace(/\.pdf$/i,'').replace(/[_]+/g,' ').trim(); return n.length>34 ? n.slice(0,33)+'…' : n; }
+window.__bookReady=function(n,id,name){
+  B.busy='';
+  if(n>0){ B.lib=B.lib.filter(function(x){ return x.id!==id; }).concat([{id:id, name:bookName(name), pages:n}]); if(B.cur) bookSave(); B.cur=id; bookLibSave(); bookStoreLoad(); B.msg='Libro añadido: '+n+' páginas.'; }
   else if(n===0) B.msg='';
   else B.msg='No se pudo abrir ese PDF. Prueba con otro archivo.';
   if(mode==='b') renderBook();
@@ -2900,13 +2919,18 @@ window.__bookReady=function(n){
 window.__bookPage=function(id,b64){ var f=bpend[id]; if(f){ delete bpend[id]; f(b64); } };
 function bookRender(n,width){
   return new Promise(function(res){
-    if(bookNative()){ var id='p'+(++bseq); bpend[id]=res; try{ window.Android.bookPage(n-1,width,id); }catch(e){ delete bpend[id]; res(''); } }
-    else if(typeof window.__bookTestRender==='function'){ Promise.resolve(window.__bookTestRender(n,width)).then(res, function(){ res(''); }); }
+    if(bookNative()){ var id='p'+(++bseq); bpend[id]=res; try{ window.Android.bookPage(B.cur,n-1,width,id); }catch(e){ delete bpend[id]; res(''); } }
+    else if(typeof window.__bookTestRender==='function'){ Promise.resolve(window.__bookTestRender(n,width,B.cur)).then(res, function(){ res(''); }); }
     else res('');
   });
 }
-function bookPick(){ if(bookNative()){ B.busy='pick'; try{ window.Android.pickBook(); }catch(e){ B.busy=''; } renderBook(); } }
-function bookRemove(){ try{ if(bookNative()) window.Android.removeBook(); }catch(e){} B.pages=0; B.img=''; B.imgPg=0; renderBook(); }
+function bookPick(){ if(!bookNative()) return; B.busy='pick'; B.msg=''; try{ window.Android.pickBook('k'+Date.now().toString(36)); }catch(e){ B.busy=''; } renderBook(); }
+function bookSelect(id){ if(id===B.cur||B.busy) return; bookSave(); B.cur=id; B.msg=''; B.ask=''; bookLibSave(); bookStoreLoad(); renderBook(); }
+function bookRemove(){
+  var id=B.cur; try{ if(bookNative()) window.Android.removeBook(id); }catch(e){}
+  kvSet('lena.bk.'+id,''); B.lib=B.lib.filter(function(x){ return x.id!==id; }); B.cur=B.lib.length?B.lib[0].id:''; bookLibSave(); bookStoreLoad(); B.msg='Libro quitado.'; renderBook();
+}
+function bookFull(on){ B.full=!!on; try{ if(bookNative() && window.Android.setFullscreen) window.Android.setFullscreen(!!on); }catch(e){} renderBook(); var v=$('bView'); if(v) v.scrollTop=0; }
 function bookGo(n){
   n=Math.round(Number(n)); if(!isFinite(n)) return; n=Math.max(1,Math.min(B.pages,n));
   B.pg=n; B.msg=''; B.ask=''; bookSave(); B.img=''; B.imgPg=0; renderBook(); var v=$('bView'); if(v) v.scrollTop=0;
@@ -3037,28 +3061,37 @@ function bookLayout(pageEl){
 }
 function renderBook(){
   if(mode!=='b') return;
-  var v=$('bView'); var w=h('div','exwrap');
-  var hd=h('div'); hd.append(h('h2','ex-h2','Libro'), h('p','ex-lead','Tu libro de Schritte: contesta sobre la propia página y la app te corrige encima.')); w.append(hd);
+  var v=$('bView'); v.classList.toggle('bk-fs', !!(B.full && B.cur));
+  if(!(B.full && B.cur)){ B.full=false; }
+  var w=h('div','exwrap');
+  if(!B.full){ var hd=h('div'); hd.append(h('h2','ex-h2','Libro'), h('p','ex-lead','Contesta sobre la propia página y la app te corrige encima. Tus ejercicios y respuestas se guardan.')); w.append(hd); }
   if(!bookNative() && !(typeof window.__bookTestRender==='function')){
     w.append(h('div','tcard','Esta función solo está en la app instalada en el móvil o la tablet.')); v.replaceChildren(w); return;
   }
-  if(B.pages<=0){
+  if(!B.full){
+    var lib=h('div','bk-lib');
+    B.lib.forEach(function(b){ var c=h('button','chip'+(b.id===B.cur?' strong':''), b.name); c.type='button'; c.setAttribute('aria-pressed',String(b.id===B.cur)); c.addEventListener('click',function(){ bookSelect(b.id); }); lib.append(c); });
+    var ad=h('button','chip', B.busy==='pick'?'Cargando…':'＋ Añadir libro'); ad.type='button'; ad.disabled=B.busy==='pick'; ad.addEventListener('click',bookPick); lib.append(ad);
+    w.append(lib);
+  }
+  if(!B.cur || B.pages<=0){
     var c=h('div','tcard');
     c.append(h('div','section-label','Carga tu libro'));
-    c.append(h('p',null,'Elige el PDF del libro en tu dispositivo. El libro se queda en tu tablet y no se sube a ningún sitio: solo se envía a Claude la página que analices o corrijas.'));
-    var pb=h('button','btn primary big', B.busy==='pick'?'Cargando…':'Elegir el PDF del libro'); pb.type='button'; pb.disabled=B.busy==='pick'; pb.addEventListener('click',bookPick); c.append(pb);
+    c.append(h('p',null,'Elige el PDF de un libro en tu dispositivo. Puedes añadir varios. El libro se queda en tu tablet y no se sube a ningún sitio: solo se envía a Claude la página que analices o corrijas.'));
     if(B.msg) c.append(h('p','note',B.msg));
     w.append(c); v.replaceChildren(w); return;
   }
+  var st=bookPageState(), has=st.f.length>0, busy=!!B.busy;
+  var tool=h('div','bk-tool');
   var bar=h('div','bk-bar');
+  if(B.full){ var ex=h('button','btn','✕ Salir'); ex.type='button'; ex.addEventListener('click',function(){ bookFull(false); }); bar.append(ex); }
   var pv=h('button','btn','‹'); pv.type='button'; pv.disabled=B.pg<=1; pv.addEventListener('click',function(){ bookGo(B.pg-1); });
   var ip=h('input','bk-pgn'); ip.type='number'; ip.min=1; ip.max=B.pages; ip.value=B.pg; ip.setAttribute('inputmode','numeric'); ip.addEventListener('change',function(){ bookGo(ip.value); });
   var nx=h('button','btn','›'); nx.type='button'; nx.disabled=B.pg>=B.pages; nx.addEventListener('click',function(){ bookGo(B.pg+1); });
   var zo=h('button','btn','−'); zo.type='button'; zo.addEventListener('click',function(){ B.zoom=Math.max(1,B.zoom-0.5); renderBook(); });
   var zi=h('button','btn','+'); zi.type='button'; zi.addEventListener('click',function(){ B.zoom=Math.min(3,B.zoom+0.5); renderBook(); });
   bar.append(pv, ip, h('span','bk-of','de '+B.pages), nx, h('span','bk-sp'), zo, h('span','bk-of',Math.round(B.zoom*100)+' %'), zi);
-  w.append(bar);
-  var st=bookPageState(), has=st.f.length>0, busy=!!B.busy;
+  tool.append(bar);
   var act=h('div','bk-bar');
   var db=h('button','btn'+(has?'':' primary'), B.busy==='detect'?'Buscando…':(B.ask==='det'?'¿Seguro? Borra tus respuestas':(has?'Volver a detectar':'🔍 Detectar ejercicios'))); db.type='button'; db.disabled=busy||!B.img; db.addEventListener('click',function(){ if(has && B.ask!=='det'){ B.ask='det'; renderBook(); return; } B.ask=''; bookDetect(); });
   act.append(db);
@@ -3066,7 +3099,9 @@ function renderBook(){
     var cb=h('button','btn primary', B.busy==='check'?'Corrigiendo…':'✓ Corregir'); cb.type='button'; cb.disabled=busy; cb.addEventListener('click',bookCheck); act.append(cb);
     var cl=h('button','btn','Borrar respuestas'); cl.type='button'; cl.disabled=busy; cl.addEventListener('click',function(){ st.a={}; st.r=null; bookSave(); B.msg=''; renderBook(); }); act.append(cl);
   }
-  w.append(act);
+  if(!B.full){ var fb=h('button','btn','⛶ Pantalla completa'); fb.type='button'; fb.addEventListener('click',function(){ bookFull(true); }); act.append(fb); }
+  tool.append(act);
+  w.append(tool);
   if(B.msg) w.append(h('p','note bk-msg',B.msg));
   if(st.r && st.r.tot){ var sc=h('div','score'); sc.append(h('b',null,st.r.ok+' / '+st.r.tot), h('span',null, st.r.ok===st.r.tot?'¡Todo correcto!':'Mira en rojo lo que falla; debajo de cada hueco está la solución.')); w.append(sc); }
   var scroll=h('div','bk-scroll'); var page=h('div','bk-page'); page.style.width=(B.zoom*100)+'%'; scroll.append(page);
@@ -3082,10 +3117,10 @@ function renderBook(){
         el=h('button',cls); el.type='button'; el.setAttribute('aria-pressed', String(st.a[f.id]===1)); el.setAttribute('aria-label', f.l||'opción');
         if(st.a[f.id]===1){ el.classList.add('sel'); el.textContent='✕'; }
         el.addEventListener('click',function(){
-          var on=st.a[f.id]===1; var ex=st.ex.filter(function(e){ return e.id===f.e; })[0];
-          if(!on && ex && !ex.multi) st.f.forEach(function(g){ if(g.e===f.e && g.t==='mark') delete st.a[g.id]; });
+          var on=st.a[f.id]===1; var ex2=st.ex.filter(function(e){ return e.id===f.e; })[0];
+          if(!on && ex2 && !ex2.multi) st.f.forEach(function(g){ if(g.e===f.e && g.t==='mark') delete st.a[g.id]; });
           if(on) delete st.a[f.id]; else st.a[f.id]=1;
-          st.r=null; bookSave(); renderBook();
+          st.r=null; bookSave(); var sy=v.scrollTop; renderBook(); v.scrollTop=sy;
         });
       } else {
         el = f.t==='area' ? h('textarea',cls) : h('input',cls);
@@ -3102,10 +3137,10 @@ function renderBook(){
     setTimeout(function(){ bookLayout(page); },0);
   } else {
     page.append(h('div','bk-load', 'Cargando la página '+B.pg+'…'));
-    var mySeq=++bimgSeq, want=B.pg;
+    var mySeq=++bimgSeq, want=B.pg, wantBook=B.cur;
     bookRender(want,1400).then(function(b){
-      if(mySeq!==bimgSeq||want!==B.pg) return;
-      if(!b){ B.msg='No pude mostrar esa página.'; B.img=''; renderBook(); return; }
+      if(mySeq!==bimgSeq||want!==B.pg||wantBook!==B.cur) return;
+      if(!b){ B.msg='No pude mostrar esa página.'; B.img=''; B.imgPg=-1; renderBook(); return; }
       B.img='data:image/jpeg;base64,'+b; B.imgPg=want; renderBook();
     });
   }
@@ -3114,7 +3149,9 @@ function renderBook(){
     var notes=st.f.map(function(f){ var r=st.r.res[f.id]; return r&&r.note ? (f.l?f.l+': ':'')+r.note : ''; }).filter(Boolean);
     if(notes.length){ var nc=h('div','tcard'); nc.append(h('div','section-label','Explicaciones')); notes.forEach(function(t){ nc.append(h('p','note',t)); }); w.append(nc); }
   }
-  var rm=h('button','link', B.ask==='rm'?'¿Seguro? Pulsa otra vez para quitar el PDF':'Quitar el libro de la app'); rm.type='button'; rm.addEventListener('click',function(){ if(B.ask!=='rm'){ B.ask='rm'; renderBook(); return; } B.ask=''; bookRemove(); }); w.append(rm);
+  if(!B.full){
+    var rm=h('button','link', B.ask==='rm'?'¿Seguro? Se borran el PDF y tus respuestas de este libro':'Quitar este libro de la app'); rm.type='button'; rm.addEventListener('click',function(){ if(B.ask!=='rm'){ B.ask='rm'; renderBook(); return; } B.ask=''; bookRemove(); }); w.append(rm);
+  }
   v.replaceChildren(w);
 }
 

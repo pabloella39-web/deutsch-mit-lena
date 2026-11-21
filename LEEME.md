@@ -104,3 +104,9 @@ En la pestaña «Hoy», en «Lo que dimos en clase», pulsa «📷 Subir fotos d
 
 ## v26 – Pestaña «Libro» (Schritte international)
 Nueva pestaña «Libro»: eliges el PDF del libro en tu tablet (queda guardado solo en la app, no va dentro de la APK ni se sube a ningún sitio). Pasas las páginas, pulsas «Detectar ejercicios» y Claude (modelo Sonnet) pone sobre la propia página huecos para escribir, botones para marcar opciones y casillas para números o letras. Contestas encima y pulsas «Corregir»: ✓ verde, ✕ rojo y la solución escrita bajo el hueco, con una explicación corta. Las respuestas se guardan por página. Usa tu clave de Claude (una página cuesta unos céntimos). El libro no trae soluciones: Claude resuelve cada ejercicio y, en los de audio, si no está seguro no corrige.
+
+## v27 – Varios libros y pantalla completa
+- En «Libro» puedes añadir varios PDF («＋ Añadir libro») y cambiar de uno a otro con los botones de arriba. Si ya tenías el libro de la v26, aparece como el primero.
+- Cada libro guarda aparte los ejercicios detectados y tus respuestas y correcciones de cada página, así que no hay que repetir nada al volver. Se conservan al cerrar la app.
+- «⛶ Pantalla completa» muestra el libro ocupando toda la pantalla (sin barras del sistema), con una barra pequeña para pasar de página, hacer zoom, detectar y corregir. El botón Atrás del móvil sale de la pantalla completa.
+- «Quitar este libro de la app» borra el PDF y las respuestas de ese libro (pide confirmación).

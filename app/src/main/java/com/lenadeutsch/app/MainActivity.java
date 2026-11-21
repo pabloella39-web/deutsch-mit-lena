@@ -229,18 +229,37 @@ public class MainActivity extends Activity {
         synchronized (bookLock) {
             try { if (bookRenderer != null) bookRenderer.close(); } catch (Exception e) { }
             try { if (bookFd != null) bookFd.close(); } catch (Exception e) { }
-            bookRenderer = null; bookFd = null;
+            bookRenderer = null; bookFd = null; bookId = null;
         }
     }
 
-    private int openBook() {
+    private String bookId = null;
+    private String pickId = "b0";
+
+    private static String cleanId(String id) { return id == null ? "b0" : id.replaceAll("[^a-z0-9]", ""); }
+
+    /* One PDF per book: book_<id>.pdf. The first book of version 26 (book.pdf) becomes "b0". */
+    private File bookFile(String id) {
+        id = cleanId(id);
+        File f = new File(getFilesDir(), "book_" + id + ".pdf");
+        if (id.equals("b0") && !f.exists()) {
+            File old = new File(getFilesDir(), "book.pdf");
+            if (old.exists()) old.renameTo(f);
+        }
+        return f;
+    }
+
+    private int openBook(String id) {
+        id = cleanId(id);
         synchronized (bookLock) {
-            if (bookRenderer != null) return bookRenderer.getPageCount();
-            File f = new File(getFilesDir(), "book.pdf");
+            if (bookRenderer != null && id.equals(bookId)) return bookRenderer.getPageCount();
+            closeBook();
+            File f = bookFile(id);
             if (!f.exists()) return 0;
             try {
                 bookFd = ParcelFileDescriptor.open(f, ParcelFileDescriptor.MODE_READ_ONLY);
                 bookRenderer = new PdfRenderer(bookFd);
+                bookId = id;
                 return bookRenderer.getPageCount();
             } catch (Exception e) {
                 closeBook();
@@ -280,20 +299,31 @@ public class MainActivity extends Activity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQ_BOOK) {
+            final String id = pickId;
             final Uri u = (resultCode == RESULT_OK && data != null) ? data.getData() : null;
-            if (u == null) { js("window.__bookReady && window.__bookReady(0)"); return; }
+            if (u == null) { js("window.__bookReady && window.__bookReady(0," + JSONObject.quote(id) + ",'')"); return; }
             pool.execute(() -> {
                 try {
-                    File f = new File(getFilesDir(), "book.pdf");
+                    String name = "Libro";
+                    android.database.Cursor c = null;
+                    try {
+                        c = getContentResolver().query(u, null, null, null, null);
+                        if (c != null && c.moveToFirst()) {
+                            int ix = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME);
+                            if (ix >= 0 && c.getString(ix) != null) name = c.getString(ix);
+                        }
+                    } catch (Exception e) { } finally { if (c != null) c.close(); }
+                    closeBook();
+                    File f = bookFile(id);
                     try (InputStream in = getContentResolver().openInputStream(u); OutputStream out = new FileOutputStream(f)) {
                         byte[] buf = new byte[65536]; int n;
                         while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
                     }
-                    closeBook();
-                    int pages = openBook();
-                    js("window.__bookReady && window.__bookReady(" + pages + ")");
+                    int pages = openBook(id);
+                    if (pages <= 0) f.delete();
+                    js("window.__bookReady && window.__bookReady(" + pages + "," + JSONObject.quote(id) + "," + JSONObject.quote(name) + ")");
                 } catch (Exception e) {
-                    js("window.__bookReady && window.__bookReady(-1)");
+                    js("window.__bookReady && window.__bookReady(-1," + JSONObject.quote(id) + ",'')");
                 }
             });
             return;
@@ -377,31 +407,42 @@ public class MainActivity extends Activity {
     /** Methods callable from the page as window.Android.* */
     public class Bridge {
         @JavascriptInterface
-        public int bookInfo() { return openBook(); }
+        public int bookInfo(String id) { return openBook(id); }
 
         @JavascriptInterface
-        public void pickBook() {
+        public void pickBook(String id) {
+            pickId = cleanId(id);
             runOnUiThread(() -> {
                 Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                 i.addCategory(Intent.CATEGORY_OPENABLE);
                 i.setType("application/pdf");
                 try { startActivityForResult(i, REQ_BOOK); }
-                catch (Exception e) { js("window.__bookReady && window.__bookReady(-2)"); }
+                catch (Exception e) { js("window.__bookReady && window.__bookReady(-2," + JSONObject.quote(pickId) + ",'')"); }
             });
         }
 
         @JavascriptInterface
-        public void removeBook() {
-            pool.execute(() -> { closeBook(); new File(getFilesDir(), "book.pdf").delete(); });
+        public void removeBook(final String id) {
+            pool.execute(() -> { synchronized (bookLock) { if (cleanId(id).equals(bookId)) closeBook(); } bookFile(id).delete(); });
+        }
+
+        @JavascriptInterface
+        public void setFullscreen(final boolean on) {
+            runOnUiThread(() -> {
+                if (Build.VERSION.SDK_INT < 19 || getWindow() == null) return;
+                int f = on ? (android.view.View.SYSTEM_UI_FLAG_FULLSCREEN | android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                        | android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY | android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE) : 0;
+                getWindow().getDecorView().setSystemUiVisibility(f);
+            });
         }
 
         /* Renders page n (0-based) as a JPEG with the given width and sends it back to the page. */
         @JavascriptInterface
-        public void bookPage(final int n, final int width, final String id) {
+        public void bookPage(final String bid, final int n, final int width, final String id) {
             pool.execute(() -> {
                 String b64 = "";
                 try {
-                    if (openBook() > 0) {
+                    if (openBook(bid) > 0) {
                         synchronized (bookLock) {
                             PdfRenderer.Page pg = bookRenderer.openPage(n);
                             int w = Math.max(300, Math.min(2000, width));
