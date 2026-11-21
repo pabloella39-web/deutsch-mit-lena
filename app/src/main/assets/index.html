@@ -1381,7 +1381,7 @@ var CLASS_TOPICS=[
  {t:'Vocabulario de clase (alemán → español)', spec:'Vocabulary quiz. Use mostly "choice" WITHOUT a blank: prompt_de = a German word or short phrase (with article for nouns), options = 3 or 4 Spanish meanings, one correct (plausible distractors). Words: anbieten, ankündigen, bedauern, beabsichtigen, sich beschweren, drohen, empfehlen, versprechen, vorhaben, die Hochzeit, ledig, verwitwet, geschieden, getrennt, der Eingang, der Ausgang, einziehen, ausziehen, umziehen, der Mieter, der Vermieter, die Grippe, die Gerichtsstelle, der Lebenslauf, die Bewerbung, die Anmeldung, die Heizung, das Gewitter, der Sturm, sich ereignen, stattfinden, bequem, klug, besonders.'},
  {t:'Vocabulario de clase (español → alemán)', spec:'Vocabulary production, ALL "translate": Spanish word or very short phrase in prompt_es (nouns: give the German with article in answers), e.g. ofrecer, anunciar, lamentar, quejarse, amenazar, recomendar, prometer, la boda, soltero, viudo, divorciado, la entrada, la salida, mudarse, el inquilino, el casero, la gripe, el currículum, la solicitud, la calefacción, la tormenta, tener mariposas en el estómago, contar las horas. Several answers may be given when synonyms exist. Allow prompt_es of 1 to 8 words.', only:'translate'}
 ];
-function classSpec(topic){ for(var i=0;i<CLASS_TOPICS.length;i++) if(CLASS_TOPICS[i].t===topic) return CLASS_TOPICS[i]; return null; }
+function classSpec(topic){ var all=CLASS_TOPICS.concat(P.myTopics||[]); for(var i=0;i<all.length;i++) if(all[i].t===topic) return all[i]; return null; }
 var EX_THEMES=['home and family','work and school','food and shopping','travel and transport','friends and free time','health and the city'];
 function exPrompt(q, part){
   part=part||{n:q.count, intro:true, k:0, of:1};
@@ -1645,7 +1645,7 @@ function renderPick(){
   w.append(f);
 
   var sc0=h('div','classbox'); sc0.append(h('div','section-label','De clase: lo que has dado en el curso'));
-  var cc=h('div','chips'); var mixb=h('button','chip strong','🔀 Todo mezclado al azar'); mixb.type='button'; mixb.addEventListener('click',function(){ startExercises({topic:MIX_TOPIC}); }); cc.append(mixb); CLASS_TOPICS.forEach(function(c){ var b=h('button','chip strong',c.t); b.type='button'; b.addEventListener('click',function(){ startExercises({topic:c.t}); }); cc.append(b); });
+  var cc=h('div','chips'); var mixb=h('button','chip strong','🔀 Todo mezclado al azar'); mixb.type='button'; mixb.addEventListener('click',function(){ startExercises({topic:MIX_TOPIC}); }); cc.append(mixb); CLASS_TOPICS.concat(P.myTopics||[]).forEach(function(c){ var b=h('button','chip strong',c.t); b.type='button'; b.addEventListener('click',function(){ startExercises({topic:c.t}); }); cc.append(b); });
   sc0.append(cc); w.append(sc0);
   var ms=(P.mistakes||[]).filter(function(m){ return m && m.note; });
   if(ms.length){
@@ -2475,7 +2475,7 @@ function repeatedError(){
 }
 var DAILY_TOPIC='Sesión de hoy', QUICK_TOPIC='Ejercicios rápidos';
 function dailySpec(){
-  var pool=CLASS_TOPICS.filter(function(c){ return !/ocabulario|Estado civil|Carta/.test(c.t); });
+  var pool=CLASS_TOPICS.concat(P.myTopics||[]).filter(function(c){ return !/ocabulario|Estado civil|Carta/.test(c.t); });
   var a=pool[Math.floor(Math.random()*pool.length)], b;
   do{ b=pool[Math.floor(Math.random()*pool.length)]; }while(b===a && pool.length>1);
   return 'Daily mixed session. Mix exercises from these two class areas, about half each. A) '+a.spec+' B) '+b.spec+' Include exactly 2 "translate" exercises (Spanish to German) that need these structures.';
@@ -2610,6 +2610,18 @@ function renderToday(w){
   var cn=h('div','tcard'); cn.append(h('div','section-label','Lo que dimos en clase'));
   cn.append(h('p',null,'Cuéntame en una o dos líneas qué habéis visto y te preparo ejercicios y tarjetas de eso.'));
   var ta=h('textarea','notes'); ta.rows=3; ta.placeholder='Ej.: hemos visto el genitivo, wegen y trotz, y el vocabulario de la casa'; ta.value=P.classNotes||''; ta.setAttribute('spellcheck','false'); cn.append(ta);
+  var pb=h('button','btn','📷 Subir fotos de los apuntes'); pb.type='button';
+  var pf=h('input'); pf.type='file'; pf.accept='image/*'; pf.multiple=true; pf.hidden=true;
+  pf.addEventListener('change',function(){ var fl=pf.files; if(fl&&fl.length) photoNotes(fl,pb); pf.value=''; });
+  pb.addEventListener('click',function(){ if(!getKey()){ showSheet('sh-settings'); toast('Primero añade tu clave de Claude.'); return; } pf.click(); });
+  cn.append(pb, pf);
+  if(R.photoRes){ var pr2=R.photoRes, bx=h('div','tcard'); bx.append(h('div','section-label','Integrado desde tus fotos'), h('p',null,pr2.summary||''));
+    if(pr2.topics.length) bx.append(h('p','note','Temas: '+pr2.topics.join(' · ')));
+    bx.append(h('p','note','Añadido: '+pr2.nCards+' tarjetas de vocabulario y '+pr2.nSent+' frases a tu repaso aleatorio.'));
+    if(pr2.words.length) bx.append(h('p','note','Palabras: '+pr2.words.join(' · ')));
+    if(pr2.unread) bx.append(h('p','note','No se leía bien: '+pr2.unread));
+    var eb=h('button','btn primary','Hacer ejercicios de esto'); eb.type='button'; eb.addEventListener('click',function(){ startExercises({topic:CLASSNOW_TOPIC,count:8,spec:pr2.spec}); }); bx.append(eb);
+    var xb=h('button','link','Cerrar'); xb.type='button'; xb.addEventListener('click',function(){ R.photoRes=null; renderR(); }); bx.append(xb); cn.append(bx); }
   var cb2=h('button','btn primary','Crear ejercicios y tarjetas'); cb2.type='button'; cb2.addEventListener('click',function(){ classNow(ta.value, cb2); }); cn.append(cb2);
   w.append(cn);
 
@@ -2703,6 +2715,48 @@ function weekStats(){
 }
 /* "Lo que dimos en clase" */
 var CLASSNOW_TOPIC='Lo que dimos en clase';
+function shrinkImg(file){
+  return new Promise(function(res,rej){
+    var u=URL.createObjectURL(file), im=new Image();
+    im.onload=function(){
+      var w=im.naturalWidth, hh=im.naturalHeight, k=Math.min(1, 1600/Math.max(w,hh));
+      var c=document.createElement('canvas'); c.width=Math.round(w*k); c.height=Math.round(hh*k);
+      var g=c.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0,0,c.width,c.height); g.drawImage(im,0,0,c.width,c.height);
+      URL.revokeObjectURL(u); res(c.toDataURL('image/jpeg',0.82).split(',')[1]);
+    };
+    im.onerror=function(){ URL.revokeObjectURL(u); rej(new Error('img')); };
+    im.src=u;
+  });
+}
+var photoBusy=false;
+async function photoNotes(fileList, btn){
+  if(photoBusy) return;
+  var files=Array.prototype.slice.call(fileList,0,6);
+  if(!getKey()){ showSheet('sh-settings'); return; }
+  photoBusy=true; btn.disabled=true; var old=btn.textContent; btn.textContent='Leyendo tus apuntes…';
+  try{
+    var blocks=[];
+    for(var i=0;i<files.length;i++){ blocks.push({type:'image', source:{type:'base64', media_type:'image/jpeg', data:await shrinkImg(files[i])}}); }
+    blocks.push({type:'text', text:'These photos are pages from the notebook, worksheets or handouts of a Spanish-speaking student of German (level A2-B1) from their German class. The text may be handwritten (also the teacher\'s red pen), in German and Spanish. Read EVERYTHING carefully, then return ONLY this JSON: {"summary_es":"2 or 3 sentences in Spanish saying what the pages cover","topics":[{"t":"short Spanish title of a grammar point or theme on the pages","spec":"English description for an exercise writer: the rule, the forms and the example sentences shown on the pages, 40 to 120 words"}],"cards":[{"de":"German word or phrase (nouns with article; verbs with their preposition or case if shown)","es":"short Spanish meaning","ex":"a German example sentence, preferably one from the pages","exEs":"Spanish translation of the example"}],"sentences":[{"de":"a complete German sentence from the pages (fix an obvious slip)","es":"Spanish translation"}],"unreadable_es":"empty string, or a short note about illegible parts"}. RULES: use only what is on the pages (you may add the missing Spanish meaning of a word); never invent content; at most 4 topics, 25 cards and 20 sentences; skip blanks you cannot complete; no parentheses inside "ex"; all German must be correct.'});
+    var j=await aiJSON(blocks, 4500);
+    var n=0, ns=0, got=[];
+    (Array.isArray(j.cards)?j.cards:[]).slice(0,25).forEach(function(c){ if(!c||!c.de||!c.es||findWord(c.de)) return; V.words.push({de:String(c.de).trim().slice(0,80), es:String(c.es).trim().slice(0,100), ex:String(c.ex||'').trim().slice(0,200), exEs:String(c.exEs||'').trim().slice(0,200), uses:0, at:-500, cls:1, rev:0}); got.push(String(c.de).trim()); n++; });
+    P.mySent=P.mySent||[];
+    (Array.isArray(j.sentences)?j.sentences:[]).slice(0,20).forEach(function(c){ if(!c||typeof c.de!=='string'||c.de.trim().length<8) return; var d=c.de.trim().slice(0,220); if(P.mySent.some(function(x){ return x.de===d; })) return; P.mySent.push({de:d, es:String(c.es||'').trim().slice(0,220)}); ns++; });
+    P.mySent=P.mySent.slice(-120);
+    P.myTopics=P.myTopics||[]; var tt=[], spec=[];
+    (Array.isArray(j.topics)?j.topics:[]).slice(0,4).forEach(function(t){ if(!t||!t.t||!t.spec) return; var tn=String(t.t).trim().slice(0,70), sp=String(t.spec).trim().slice(0,800); spec.push(tn+': '+sp); tt.push(tn);
+      var ex=P.myTopics.filter(function(x){ return x.t===tn; })[0]; if(ex) ex.spec=sp; else P.myTopics.push({t:tn, spec:sp}); });
+    P.myTopics=P.myTopics.slice(-30);
+    var sum=String(j.summary_es||'').trim();
+    if(sum){ P.classAll=(P.classAll||[]).concat([sum.slice(0,300)]).slice(-30); P.classNotes=sum.slice(0,600); }
+    save('profile','vocab'); renderHeader(); pushMeta();
+    if(!n && !ns && !tt.length){ toast('No he podido leer nada útil en las fotos. Prueba con más luz y la página entera.'); }
+    else R.photoRes={summary:sum, topics:tt, nCards:n, nSent:ns, words:got.slice(0,12), unread:String(j.unreadable_es||'').trim(), spec:(spec.join('\n')||sum)+(n?'\nVocabulary: '+got.slice(0,15).join('; '):'')};
+  }catch(e){ toast(e&&e.code ? errCopy(e) : 'No pude leer las fotos. Prueba con menos fotos o más pequeñas.'); }
+  photoBusy=false; btn.disabled=false; btn.textContent=old;
+  if(mode==='r' && R.stage==='home') renderR();
+}
 async function classNow(text, btn){
   text=String(text||'').trim();
   if(text.length<4){ toast('Escribe qué habéis visto en clase.'); return; }
@@ -2742,10 +2796,10 @@ function isMixTopic(t){ return t===DAILY_TOPIC||t===QUICK_TOPIC||t===MIX_TOPIC; 
 function pickN(arr,n){ return shuffled(arr).slice(0,n); }
 function allClassTopics(){
   var extra=PATH.filter(function(p){ return [8,9,12,13,23,24].indexOf(p.id)>=0 && p.spec; }).map(function(p){ return {t:p.t,spec:p.spec}; });
-  return CLASS_TOPICS.filter(function(c){ return !/^Vocabulario de clase|^Verbos de clase con zu/.test(c.t); }).concat(extra);
+  return CLASS_TOPICS.filter(function(c){ return !/^Vocabulario de clase|^Verbos de clase con zu/.test(c.t); }).concat(extra).concat(P.myTopics||[], P.myTopics||[]);
 }
 function allClassSpec(){
-  var tops=pickN(allClassTopics(),4), sents=pickN(CLASS_SENT,5);
+  var tops=pickN(allClassTopics(),4), sents=pickN(P.mySent||[],3).concat(pickN(CLASS_SENT,(P.mySent&&P.mySent.length)?2:5));
   var mine=V.words.filter(function(w){ return w.cls; }); var pool=mine.length>=12 ? mine.map(function(w){ return {de:w.de,es:w.es}; }) : CLASS_WORDS;
   var words=pickN(pool,6);
   var o=['REVIEW OF EVERYTHING THE LEARNER HAS STUDIED IN THEIR GERMAN COURSE. Mix several different areas in this worksheet, one or two exercises per area, in random order (never a block on a single topic). Areas:'];

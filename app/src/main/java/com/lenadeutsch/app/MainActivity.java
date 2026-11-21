@@ -12,7 +12,11 @@ import android.os.Bundle;
 import android.speech.RecognizerIntent;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
+import android.content.ClipData;
+import android.provider.MediaStore;
 import android.webkit.JavascriptInterface;
+import android.webkit.ValueCallback;
+import androidx.core.content.FileProvider;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
@@ -22,6 +26,7 @@ import android.webkit.WebViewClient;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -46,6 +51,9 @@ import java.util.regex.Pattern;
 public class MainActivity extends Activity {
 
     private static final int REQ_SPEECH = 4242;
+    private static final int REQ_FILES = 4243;
+    private ValueCallback<Uri[]> fileCb;
+    private Uri camUri;
     private static final String API_HOST_PREFIX = "https://api.anthropic.com/";
 
     private WebView web;
@@ -73,7 +81,37 @@ public class MainActivity extends Activity {
         s.setMediaPlaybackRequiresUserGesture(false);
 
         web.addJavascriptInterface(new Bridge(), "Android");
-        web.setWebChromeClient(new WebChromeClient());
+        web.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onShowFileChooser(WebView v, ValueCallback<Uri[]> cb, FileChooserParams params) {
+                if (fileCb != null) fileCb.onReceiveValue(null);
+                fileCb = cb;
+                Intent pick = new Intent(Intent.ACTION_GET_CONTENT);
+                pick.addCategory(Intent.CATEGORY_OPENABLE);
+                pick.setType("image/*");
+                pick.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+                Intent chooser = Intent.createChooser(pick, "Fotos de los apuntes");
+                try {
+                    File dir = new File(getCacheDir(), "photos");
+                    dir.mkdirs();
+                    File f = new File(dir, "cam_" + System.currentTimeMillis() + ".jpg");
+                    camUri = FileProvider.getUriForFile(MainActivity.this, getPackageName() + ".files", f);
+                    Intent cam = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                    cam.putExtra(MediaStore.EXTRA_OUTPUT, camUri);
+                    cam.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    cam.setClipData(ClipData.newRawUri("", camUri));
+                    if (cam.resolveActivity(getPackageManager()) != null)
+                        chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{cam});
+                    else camUri = null;
+                } catch (Exception e) { camUri = null; }
+                try {
+                    startActivityForResult(chooser, REQ_FILES);
+                } catch (Exception e) {
+                    fileCb = null; cb.onReceiveValue(null); return false;
+                }
+                return true;
+            }
+        });
         web.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
@@ -208,6 +246,23 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQ_FILES) {
+            Uri[] out = null;
+            if (resultCode == RESULT_OK) {
+                if (data != null && data.getClipData() != null) {
+                    int n = data.getClipData().getItemCount();
+                    out = new Uri[n];
+                    for (int k = 0; k < n; k++) out[k] = data.getClipData().getItemAt(k).getUri();
+                } else if (data != null && data.getData() != null) {
+                    out = new Uri[]{data.getData()};
+                } else if (camUri != null) {
+                    out = new Uri[]{camUri};
+                }
+            }
+            if (fileCb != null) { fileCb.onReceiveValue(out); fileCb = null; }
+            camUri = null;
+            return;
+        }
         if (requestCode != REQ_SPEECH) return;
         if (resultCode == RESULT_OK && data != null) {
             ArrayList<String> results = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);

@@ -97,3 +97,7 @@ En **Ejercicios** hay un bloque «De clase» con 16 temas de tus apuntes: prepos
 
 ## Clase del 13 de noviembre (v22)
 Añadidos: gern/mögen/gefallen/schmecken, preposición + artículo (Akk o Dat), TeKaMoLo, wenn/ob y da(r)- + ob/dass, la lista ampliada de verbos con dativo, 34 palabras nuevas y 52 frases de tus hojas. Todo entra en el Repaso total.
+
+
+## v24 – Fotos de apuntes
+En la pestaña «Hoy», en «Lo que dimos en clase», pulsa «📷 Subir fotos de los apuntes» (hasta 6 fotos: cámara o galería). Claude lee las páginas y añade a tu app los temas, las tarjetas de vocabulario y las frases, que entran en el repaso aleatorio. Muestra lo añadido y puedes hacer ejercicios de eso al momento. Las fotos solo se envían a Claude con tu clave; no se guardan.
